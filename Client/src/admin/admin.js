@@ -3,9 +3,8 @@ import './admin.css';
 
 const AdminLogin = ({ onLogin }) => {
   const [credentials, setCredentials] = useState({
-    fullName: '',
-    email: '',
-    password: ''
+    email_admin: '',
+    password_admin: ''
   });
   const [error, setError] = useState('');
 
@@ -23,7 +22,7 @@ const AdminLogin = ({ onLogin }) => {
     
     // Appel API vers votre backend
     try {
-      const response = await fetch('http://localhost:5000/api/admin/login', {
+      const response = await fetch('api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(credentials)
@@ -33,7 +32,8 @@ const AdminLogin = ({ onLogin }) => {
       
       if (response.ok) {
         localStorage.setItem('adminToken', data.token);
-        if (onLogin) onLogin(data);
+        // if (onLogin) onLogin(data);
+        onLogin();
       } else {
         setError(data.message || 'Échec de connexion');
       }
@@ -49,32 +49,23 @@ const AdminLogin = ({ onLogin }) => {
         
         {error && <div className="error-message">{error}</div>}
         
-        <input
-          type="text"
-          name="fullName"
-          className="admin-input"
-          placeholder="Nom complet"
-          value={credentials.fullName}
-          onChange={handleChange}
-          required
-        />
-        
-        <input
+      
+         <input
           type="email"
-          name="email"
+          name="email_admin"           
           className="admin-input"
           placeholder="Email"
-          value={credentials.email}
+          value={credentials.email_admin}  
           onChange={handleChange}
           required
         />
         
         <input
           type="password"
-          name="password"
+          name="password_admin"           
           className="admin-input"
           placeholder="Mot de passe"
-          value={credentials.password}
+          value={credentials.password_admin}  
           onChange={handleChange}
           required
         />
