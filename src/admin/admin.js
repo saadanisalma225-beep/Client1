@@ -1,144 +1,90 @@
 import React, { useState } from 'react';
+import './admin.css'; 
 
-const AdminLogin = () => {
-  const [formData, setFormData] = useState({
+const AdminLogin = ({ onLogin }) => {
+  const [credentials, setCredentials] = useState({
     fullName: '',
     email: '',
     password: ''
   });
+  const [error, setError] = useState('');
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData({
-      ...formData,
+    setCredentials(prev => ({
+      ...prev,
       [name]: value
-    });
+    }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Admin Login:', formData);
-    alert(`Connexion administrateur: ${formData.fullName}`);
+    setError('');
+    
+    // Appel API vers votre backend
+    try {
+      const response = await fetch('http://localhost:5000/api/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(credentials)
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        localStorage.setItem('adminToken', data.token);
+        if (onLogin) onLogin(data);
+      } else {
+        setError(data.message || 'Échec de connexion');
+      }
+    } catch (err) {
+      setError('Erreur de connexion au serveur');
+    }
   };
 
   return (
-    <div style={styles.container}>
-      <div style={styles.card}>
-        <div style={styles.header}>
-          <h1 style={styles.title}>Administrateur</h1>
-        </div>
-
-        <form onSubmit={handleSubmit} style={styles.form}>
-          <div style={styles.inputGroup}>
-            <label style={styles.label}>Nom complet</label>
-            <input
-              type="text"
-              name="fullName"
-              value={formData.fullName}
-              onChange={handleChange}
-              style={styles.input}
-              placeholder="Nom complet"
-              required
-            />
-          </div>
-
-          <div style={styles.inputGroup}>
-            <label style={styles.label}>Email</label>
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              style={styles.input}
-              placeholder="Email"
-              required
-            />
-          </div>
-
-          <div style={styles.inputGroup}>
-            <label style={styles.label}>Mot de passe</label>
-            <input
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              style={styles.input}
-              placeholder="Mot de passe"
-              required
-            />
-          </div>
-
-          <button type="submit" style={styles.button}>
-            Se connecter
-          </button>
-        </form>
-      </div>
+    <div className="admin-container">
+      <form className="admin-form" onSubmit={handleSubmit}>
+        <h2>Administrateur</h2>
+        
+        {error && <div className="error-message">{error}</div>}
+        
+        <input
+          type="text"
+          name="fullName"
+          className="admin-input"
+          placeholder="Nom complet"
+          value={credentials.fullName}
+          onChange={handleChange}
+          required
+        />
+        
+        <input
+          type="email"
+          name="email"
+          className="admin-input"
+          placeholder="Email"
+          value={credentials.email}
+          onChange={handleChange}
+          required
+        />
+        
+        <input
+          type="password"
+          name="password"
+          className="admin-input"
+          placeholder="Mot de passe"
+          value={credentials.password}
+          onChange={handleChange}
+          required
+        />
+        
+        <button type="submit" className="admin-button">
+          Se connecter
+        </button>
+      </form>
     </div>
   );
-};
-
-const styles = {
-  container: {
-    minHeight: '100vh',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#f0f2f5',
-    fontFamily: 'Arial, sans-serif'
-  },
-  card: {
-    backgroundColor: 'white',
-    borderRadius: '12px',
-    padding: '40px',
-    width: '100%',
-    maxWidth: '450px',
-    boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
-  },
-  header: {
-    textAlign: 'center',
-    marginBottom: '32px'
-  },
-  title: {
-    fontSize: '28px',
-    color: '#1a1a2e',
-    marginBottom: '8px',
-    fontWeight: '600'
-  },
-  form: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '20px'
-  },
-  inputGroup: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '8px'
-  },
-  label: {
-    fontSize: '14px',
-    fontWeight: '500',
-    color: '#333'
-  },
-  input: {
-    padding: '12px 16px',
-    border: '1px solid #ddd',
-    borderRadius: '8px',
-    fontSize: '15px',
-    outline: 'none',
-    transition: 'border-color 0.3s'
-  },
-  button: {
-    backgroundColor: '#e0a800',
-    color: 'white',
-    border: 'none',
-    padding: '14px',
-    borderRadius: '8px',
-    fontSize: '16px',
-    fontWeight: 'bold',
-    cursor: 'pointer',
-    marginTop: '10px',
-    transition: 'background-color 0.3s'
-  }
 };
 
 export default AdminLogin;
