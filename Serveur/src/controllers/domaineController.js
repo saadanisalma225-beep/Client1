@@ -22,7 +22,7 @@ exports.create = async (req, res, next) => {
     res.status(201).json({
       success: true,
       message: 'Domaine créé avec succès',
-      domaine: { 
+      domaines: { 
         id_domaine: id, 
         nom_domaine, 
         description_domaine, 

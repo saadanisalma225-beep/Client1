@@ -1,11 +1,21 @@
 const { pool } = require('../config/database');
 
 class Domaine {
-  // Créer un domaine
-  static async create({ nom_domaine, description_domaine, image_domaine }) {  
+  // Helper pour convertir undefined en null
+  static sanitize(value) {
+    return value === undefined ? null : value;
+  }
+
+  // Créer un domaine - CORRIGÉ
+  static async create({ nom_domaine, description_domaine, image_domaine }) {
+    // Convertir undefined en null pour MySQL
+    const cleanNom = this.sanitize(nom_domaine);
+    const cleanDescription = this.sanitize(description_domaine);
+    const cleanImage = this.sanitize(image_domaine);
+    
     const [result] = await pool.execute(
-      'INSERT INTO domaines (nom_domaine, description_domaine, image_domaine) VALUES (?, ?, ?)',  
-      [nom_domaine, description_domaine, image_domaine]  
+      'INSERT INTO domaines (nom_domaine, description_domaine, image_domaine) VALUES (?, ?, ?)',
+      [cleanNom, cleanDescription, cleanImage]
     );
     return result.insertId;
   }
@@ -27,11 +37,16 @@ class Domaine {
     return rows[0] || null;
   }
 
-  // Mettre à jour un domaine
-  static async update(id_domaine, { nom_domaine, description_domaine, image_domaine }) {  
+  // Mettre à jour un domaine - CORRIGÉ
+  static async update(id_domaine, { nom_domaine, description_domaine, image_domaine }) {
+    // Convertir undefined en null pour MySQL
+    const cleanNom = this.sanitize(nom_domaine);
+    const cleanDescription = this.sanitize(description_domaine);
+    const cleanImage = this.sanitize(image_domaine);
+    
     const [result] = await pool.execute(
-      'UPDATE domaines SET nom_domaine = ?, description_domaine = ?, image_domaine = ? WHERE id_domaine = ?',  
-      [nom_domaine, description_domaine, image_domaine, id_domaine]  
+      'UPDATE domaines SET nom_domaine = ?, description_domaine = ?, image_domaine = ? WHERE id_domaine = ?',
+      [cleanNom, cleanDescription, cleanImage, id_domaine]
     );
     return result.affectedRows > 0;
   }
