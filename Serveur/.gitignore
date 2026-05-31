@@ -1,0 +1,16 @@
+# Dependencies
+node_modules/
+.env              # ❌ Ignoré (vraies valeurs)
+.env.example      # ✅ Gardé (exemple de variables d'environnement)
+.env.local
+.env.development
+.env.production
+
+# Logs
+logs/
+*.log
+
+# Autres
+.vscode/
+.DS_Store
+Thumbs.db
