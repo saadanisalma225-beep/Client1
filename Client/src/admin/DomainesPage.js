@@ -1,94 +1,212 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 import "./DomainesPage.css";
 
-function DomainesPage() {
-  // État pour les domaines
-  const [domains, setDomains] = useState([
-    {
-      id: 1,
-      name: "Art",
-      intro: "Un texte de présentation doit raconter une histoire (storytelling), définir l'inspiration principale et cibler les émotions du public.",
-      image: "https://cdn-icons-png.flaticon.com/512/1006/1006771.png"
-    },
-    {
-      id: 2,
-      name: "Musique",
-      intro: "Découvrez les instruments de musique anciens et modernes, une collection unique pour les passionnés.",
-      image: "https://cdn-icons-png.flaticon.com/512/1006/1006771.png"
-    },
-    {
-      id: 3,
-      name: "Littérature",
-      intro: "Livres rares, manuscrits anciens et premières éditions pour les collectionneurs avertis.",
-      image: "https://cdn-icons-png.flaticon.com/512/1006/1006771.png"
-    }
-  ]);
+// ========== CORRECTIONS IMPORTANTES ==========
+// 1. URL corrigée : /api/admin/domaine (au lieu de /api/domaines)
+// 2. Token corrigé : "adminToken" (au lieu de "token")
+// 3. Gestion d'image améliorée avec nettoyage mémoire
+// =============================================
 
+const API_BASE_URL = "http://localhost:5000/api";
+const API_URL = `${API_BASE_URL}/admin/domaine`;  // ✅ CORRIGÉ
+
+// Configuration axios
+const api = axios.create({
+  baseURL: API_URL,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+
+// Interceptor pour ajouter le token d'authentification
+api.interceptors.request.use(
+  (config) => {
+    // ✅ CORRIGÉ: utiliser "adminToken" au lieu de "token"
+    const token = localStorage.getItem("adminToken");
+    console.log("🔑 Token présent:", !!token);
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    console.error("❌ Erreur interceptor:", error);
+    return Promise.reject(error);
+  }
+);
+
+function DomainesPage() {
+  const [domains, setDomains] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [formData, setFormData] = useState({
-    id: null,
-    name: "",
-    intro: "",
-    image: ""
+    id_domaine: null,
+    nom_domaine: "",
+    description_domaine: "",
+    image_domaine: null,
+    imagePreview: null
   });
 
-  // Filtrer les domaines selon le terme de recherche
-  const filteredDomains = domains.filter((domain) =>
-    domain.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  // Fonction pour actualiser/afficher tous les domaines
-  const handleRefresh = () => {
-    setSearchTerm("");  // Vide la recherche => affiche tous les domaines
+  // 📥 Charger les domaines depuis l'API
+  const fetchDomaines = async () => {
+    setLoading(true);
+    console.log("📡 Appel API:", API_URL);
+    
+    try {
+      const response = await api.get("/");
+      console.log("✅ Réponse reçue:", response.data);
+      
+      if (response.data.success) {
+        setDomains(response.data.domaines || []);
+        setError(null);
+      } else {
+        setDomains([]);
+        setError("Erreur: " + (response.data.message || "Données invalides"));
+      }
+    } catch (err) {
+      console.error("❌ Erreur détaillée:", err);
+      
+      // Messages d'erreur précis
+      if (err.code === 'ERR_NETWORK') {
+        setError("❌ Impossible de joindre le serveur. Vérifiez que le backend tourne sur http://localhost:5000");
+      } else if (err.response?.status === 401) {
+        setError("❌ Non authentifié. Veuillez vous reconnecter.");
+      } else if (err.response?.status === 404) {
+        setError("❌ API non trouvée. Vérifiez l'URL: /api/admin/domaine");
+      } else {
+        setError(`❌ Erreur: ${err.response?.data?.message || err.message}`);
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Fonction pour vider la recherche
+  useEffect(() => {
+    fetchDomaines();
+  }, []);
+
+  // 🔍 Filtrer les domaines
+  const filteredDomains = domains.filter((domain) =>
+    domain.nom_domaine?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const handleRefresh = () => {
+    setSearchTerm("");
+    fetchDomaines();
+  };
+
   const handleClearSearch = () => {
     setSearchTerm("");
   };
 
-  const saveDomain = () => {
-    if (!formData.name) return;
-
-    if (formData.id) {
-      // Modification
-      setDomains(
-        domains.map((domain) =>
-          domain.id === formData.id ? formData : domain
-        )
-      );
-    } else {
-      // Ajout
-      setDomains([
-        ...domains,
-        {
-          ...formData,
-          id: Date.now()
-        }
-      ]);
+  // 📝 Sauvegarder (ajout ou modification)
+  const saveDomain = async () => {
+    if (!formData.nom_domaine) {
+      alert("Le nom du domaine est requis");
+      return;
     }
 
-    setFormData({
-      id: null,
-      name: "",
-      intro: "",
-      image: ""
-    });
-    setShowForm(false);
+    try {
+      const submitData = new FormData();
+      submitData.append("nom_domaine", formData.nom_domaine);
+      submitData.append("description_domaine", formData.description_domaine || "");
+      
+      if (formData.image_domaine instanceof File) {
+        submitData.append("image", formData.image_domaine);
+      }
+
+      if (formData.id_domaine) {
+        // Mode modification
+        await api.put(`/${formData.id_domaine}`, submitData, {
+          headers: { "Content-Type": "multipart/form-data" }
+        });
+      } else {
+        // Mode ajout
+        await api.post("/", submitData, {
+          headers: { "Content-Type": "multipart/form-data" }
+        });
+      }
+
+      await fetchDomaines();
+      
+      // Réinitialiser le formulaire
+      setFormData({
+        id_domaine: null,
+        nom_domaine: "",
+        description_domaine: "",
+        image_domaine: null,
+        imagePreview: null
+      });
+      setShowForm(false);
+    } catch (err) {
+      console.error("Erreur sauvegarde:", err);
+      alert(err.response?.data?.message || "Erreur lors de la sauvegarde");
+    }
   };
 
+  // ✏️ Éditer un domaine
   const editDomain = (domain) => {
-    setFormData(domain);
+    setFormData({
+      id_domaine: domain.id_domaine,
+      nom_domaine: domain.nom_domaine,
+      description_domaine: domain.description_domaine || "",
+      image_domaine: null,
+      imagePreview: domain.image_domaine 
+        ? `http://localhost:5000/uploads/domaines/${domain.image_domaine}`
+        : null
+    });
     setShowForm(true);
   };
 
-  const deleteDomain = (id) => {
+  // 🗑️ Supprimer un domaine
+  const deleteDomain = async (id) => {
     if (window.confirm("Êtes-vous sûr de vouloir supprimer ce domaine ?")) {
-      setDomains(domains.filter((domain) => domain.id !== id));
-      // Si après suppression il n'y a plus de résultats, on peut garder la recherche ou l'effacer
+      try {
+        await api.delete(`/${id}`);
+        await fetchDomaines();
+      } catch (err) {
+        console.error("Erreur suppression:", err);
+        alert("Erreur lors de la suppression");
+      }
     }
   };
+
+  // 🖼️ Gérer la sélection d'image
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Nettoyer l'ancienne preview si elle existe
+      if (formData.imagePreview) {
+        URL.revokeObjectURL(formData.imagePreview);
+      }
+      
+      setFormData({
+        ...formData,
+        image_domaine: file,
+        imagePreview: URL.createObjectURL(file)
+      });
+    }
+  };
+
+  // Nettoyage des URLs ObjectURL au démontage
+  useEffect(() => {
+    return () => {
+      if (formData.imagePreview) {
+        URL.revokeObjectURL(formData.imagePreview);
+      }
+    };
+  }, [formData.imagePreview]);
+
+  if (loading) {
+    return (
+      <div className="domains-page" style={{ textAlign: "center", padding: "60px" }}>
+        ⏳ Chargement des domaines...
+      </div>
+    );
+  }
 
   return (
     <div className="domains-page">
@@ -96,7 +214,6 @@ function DomainesPage() {
         <h1>Mes domaines</h1>
 
         <div className="header-actions">
-          {/* Champ de recherche - recherche en temps réel */}
           <input
             type="text"
             placeholder="Rechercher un domaine..."
@@ -104,20 +221,19 @@ function DomainesPage() {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
 
-          {/* Bouton Actualiser - Affiche TOUS les domaines */}
           <button className="add-btn" onClick={handleRefresh}>
             🔄 Actualiser
           </button>
 
-          {/* Bouton Ajouter */}
           <button
             className="add-btn"
             onClick={() => {
               setFormData({
-                id: null,
-                name: "",
-                intro: "",
-                image: ""
+                id_domaine: null,
+                nom_domaine: "",
+                description_domaine: "",
+                image_domaine: null,
+                imagePreview: null
               });
               setShowForm(true);
             }}
@@ -127,14 +243,41 @@ function DomainesPage() {
         </div>
       </div>
 
-      {/* Indicateur de recherche active */}
+      {error && (
+        <div style={{
+          background: "#ffebee",
+          color: "#c62828",
+          padding: "15px",
+          borderRadius: "8px",
+          marginBottom: "20px",
+          border: "1px solid #ffcdd2"
+        }}>
+          <strong>❌ Erreur</strong>
+          <p style={{ marginTop: "5px", marginBottom: "0" }}>{error}</p>
+          <button 
+            onClick={fetchDomaines}
+            style={{
+              marginTop: "10px",
+              background: "#c62828",
+              color: "white",
+              border: "none",
+              padding: "5px 10px",
+              borderRadius: "5px",
+              cursor: "pointer"
+            }}
+          >
+            Réessayer
+          </button>
+        </div>
+      )}
+
+      {/* Indicateur de recherche */}
       {searchTerm && (
         <div style={{
           background: "#e3f2fd",
           padding: "10px 15px",
           borderRadius: "8px",
           marginBottom: "20px",
-          color: "#1976d2",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
@@ -142,7 +285,7 @@ function DomainesPage() {
           gap: "10px"
         }}>
           <span>
-            🔍 Résultats pour : <strong>"{searchTerm}"</strong> ({filteredDomains.length} domaine(s) trouvé(s))
+            🔍 Résultats : <strong>"{searchTerm}"</strong> ({filteredDomains.length} domaine(s))
           </span>
           <button
             onClick={handleClearSearch}
@@ -155,7 +298,7 @@ function DomainesPage() {
               cursor: "pointer"
             }}
           >
-            ✕ Effacer la recherche
+            ✕ Effacer
           </button>
         </div>
       )}
@@ -163,56 +306,49 @@ function DomainesPage() {
       {/* Formulaire d'ajout/modification */}
       {showForm && (
         <div className="domain-card">
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "15px",
-              width: "100%"
-            }}
-          >
+          <div style={{ display: "flex", flexDirection: "column", gap: "15px", width: "100%" }}>
             <input
               type="text"
-              placeholder="Nom du domaine"
-              value={formData.name}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  name: e.target.value
-                })
-              }
+              placeholder="Nom du domaine *"
+              value={formData.nom_domaine}
+              onChange={(e) => setFormData({ ...formData, nom_domaine: e.target.value })}
             />
+
+            <textarea
+              placeholder="Description du domaine"
+              value={formData.description_domaine}
+              onChange={(e) => setFormData({ ...formData, description_domaine: e.target.value })}
+              rows="4"
+            />
+
+            {formData.imagePreview && (
+              <div style={{ marginTop: "10px" }}>
+                <img 
+                  src={formData.imagePreview} 
+                  alt="Aperçu" 
+                  style={{ width: "100px", height: "100px", objectFit: "cover", borderRadius: "8px" }}
+                />
+              </div>
+            )}
 
             <input
               type="file"
               accept="image/*"
-              onChange={(e) => {
-                const file = e.target.files[0];
-                if (file) {
-                  const imageURL = URL.createObjectURL(file);
-                  setFormData({
-                    ...formData,
-                    image: imageURL
-                  });
-                }
-              }}
+              onChange={handleImageChange}
             />
 
-            <textarea
-              placeholder="Description / Introduction"
-              value={formData.intro}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  intro: e.target.value
-                })
-              }
-              rows="4"
-            />
-
-            <button className="add-btn" onClick={saveDomain}>
-              Sauvegarder
-            </button>
+            <div style={{ display: "flex", gap: "10px" }}>
+              <button className="add-btn" onClick={saveDomain}>
+                {formData.id_domaine ? "Mettre à jour" : "Ajouter"}
+              </button>
+              <button 
+                className="delete-btn" 
+                onClick={() => setShowForm(false)}
+                style={{ background: "#ccc", borderColor: "#ccc", color: "#333" }}
+              >
+                Annuler
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -243,24 +379,32 @@ function DomainesPage() {
           )}
         </div>
       ) : (
+        // ✅ Clés uniques avec préfixe pour éviter les conflits
         filteredDomains.map((domain) => (
-          <div className="domain-card" key={domain.id}>
+          <div className="domain-card" key={`domaine-${domain.id_domaine}`}>
             <div className="domain-image">
               <img
-                src={domain.image || "https://via.placeholder.com/250"}
-                alt={domain.name}
+                src={
+                  domain.image_domaine 
+                    ? `http://localhost:5000/uploads/domaines/${domain.image_domaine}`
+                    : "https://via.placeholder.com/250?text=Pas+d'image"
+                }
+                alt={domain.nom_domaine}
+                onError={(e) => {
+                  e.target.src = "https://via.placeholder.com/250?text=Image+non+trouvée";
+                }}
               />
             </div>
 
             <div className="domain-info">
-              <h2>{domain.name}</h2>
-              <p>{domain.intro}</p>
+              <h2>{domain.nom_domaine}</h2>
+              <p>{domain.description_domaine || "Aucune description"}</p>
 
               <div className="actions">
                 <button className="edit-btn" onClick={() => editDomain(domain)}>
                   ✏️ Modifier
                 </button>
-                <button className="delete-btn" onClick={() => deleteDomain(domain.id)}>
+                <button className="delete-btn" onClick={() => deleteDomain(domain.id_domaine)}>
                   🗑️ Supprimer
                 </button>
               </div>
