@@ -1,10 +1,13 @@
-// ProductsPage.js - Version complète
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import "./ProductsPage.css";
+import "./DomainesPage.css";
+
+// 2. Token corrigé : "adminToken" (au lieu de "token")
+// 3. Gestion d'image améliorée avec nettoyage mémoire
+// =============================================
 
 const API_BASE_URL = "http://localhost:5000/api";
-const API_URL = `${API_BASE_URL}/admin/produits`;
+const API_URL = `${API_BASE_URL}/admin/domaine`;  // ✅ CORRIGÉ
 
 // Configuration axios
 const api = axios.create({
@@ -17,49 +20,60 @@ const api = axios.create({
 // Interceptor pour ajouter le token d'authentification
 api.interceptors.request.use(
   (config) => {
+    // ✅ CORRIGÉ: utiliser "adminToken" au lieu de "token"
     const token = localStorage.getItem("adminToken");
+    console.log("🔑 Token présent:", !!token);
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => {
+    console.error("❌ Erreur interceptor:", error);
+    return Promise.reject(error);
+  }
 );
 
-function ProductsPage() {
-  const [products, setProducts] = useState([]);
-  const [categories, setCategories] = useState([]);
+function DomainesPage() {
   const [domains, setDomains] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [successMessage, setSuccessMessage] = useState(null);
+  const [showForm, setShowForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("");
-  const [selectedDomain, setSelectedDomain] = useState("");
-  const [selectedStatus, setSelectedStatus] = useState("en_attente");
-  const [selectedProduct, setSelectedProduct] = useState(null);
-  const [showDetailsModal, setShowDetailsModal] = useState(false);
-  const [rejectionReason, setRejectionReason] = useState("");
-  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [formData, setFormData] = useState({
+    id_domaine: null,
+    nom_domaine: "",
+    description_domaine: "",
+    image_domaine: null,
+    imagePreview: null
+  });
 
-  // 📥 Charger les produits
-  const fetchProducts = async () => {
+  // 📥 Charger les domaines depuis l'API
+  const fetchDomaines = async () => {
     setLoading(true);
+    console.log("📡 Appel API:", API_URL);
+    
     try {
-      const response = await api.get(`/?statut=${selectedStatus}`);
+      const response = await api.get("/");
+      console.log("✅ Réponse reçue:", response.data);
+      
       if (response.data.success) {
-        setProducts(response.data.produits || []);
+        setDomains(response.data.domaines || []);
         setError(null);
       } else {
-        setProducts([]);
-        setError(response.data.message || "Erreur de chargement");
+        setDomains([]);
+        setError("Erreur: " + (response.data.message || "Données invalides"));
       }
     } catch (err) {
-      console.error("Erreur chargement produits:", err);
+      console.error("❌ Erreur détaillée:", err);
+      
+      // Messages d'erreur précis
       if (err.code === 'ERR_NETWORK') {
         setError("❌ Impossible de joindre le serveur. Vérifiez que le backend tourne sur http://localhost:5000");
       } else if (err.response?.status === 401) {
         setError("❌ Non authentifié. Veuillez vous reconnecter.");
+      } else if (err.response?.status === 404) {
+        setError("❌ API non trouvée. Vérifiez l'URL: /api/admin/domaine");
       } else {
         setError(`❌ Erreur: ${err.response?.data?.message || err.message}`);
       }
@@ -68,455 +82,336 @@ function ProductsPage() {
     }
   };
 
-  // 📥 Charger les catégories et domaines pour les filtres
-  const fetchCategories = async () => {
-    try {
-      const response = await axios.get(`${API_BASE_URL}/admin/categorie/`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("adminToken")}` }
-      });
-      if (response.data.success) {
-        setCategories(response.data.categories || []);
-      }
-    } catch (err) {
-      console.error("Erreur chargement catégories:", err);
-    }
-  };
-
-  const fetchDomains = async () => {
-    try {
-      const response = await axios.get(`${API_BASE_URL}/admin/domaine/`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("adminToken")}` }
-      });
-      if (response.data.success) {
-        setDomains(response.data.domaines || []);
-      }
-    } catch (err) {
-      console.error("Erreur chargement domaines:", err);
-    }
-  };
-
   useEffect(() => {
-    fetchProducts();
-    fetchCategories();
-    fetchDomains();
-  }, [selectedStatus]);
+    fetchDomaines();
+  }, []);
 
-  // 🔍 Filtrer les produits
-  const filteredProducts = products.filter((product) => {
-    const matchSearch = product.nom_produit?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        product.vendeur_nom?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        product.vendeur_email?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchCategory = selectedCategory ? product.id_categorie === parseInt(selectedCategory) : true;
-    const matchDomain = selectedDomain ? product.id_domaine === parseInt(selectedDomain) : true;
-    return matchSearch && matchCategory && matchDomain;
-  });
+  // 🔍 Filtrer les domaines
+  const filteredDomains = domains.filter((domain) =>
+    domain.nom_domaine?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-  // ✅ Valider un produit
-  const validateProduct = async (product) => {
-    if (window.confirm(`Valider le produit "${product.nom_produit}" ? Il sera mis en vente aux enchères immédiatement.`)) {
-      try {
-        const response = await api.put(`/${product.id_produit}/valider`);
-        if (response.data.success) {
-          setSuccessMessage(`✅ Produit "${product.nom_produit}" validé avec succès ! Il est maintenant visible sur la plateforme.`);
-          fetchProducts();
-          setTimeout(() => setSuccessMessage(null), 4000);
-        } else {
-          setError(response.data.message || "Erreur lors de la validation");
-        }
-      } catch (err) {
-        console.error("Erreur validation:", err);
-        setError(err.response?.data?.message || "Erreur lors de la validation");
-        setTimeout(() => setError(null), 4000);
-      }
-    }
+  const handleRefresh = () => {
+    setSearchTerm("");
+    fetchDomaines();
   };
 
-  // ❌ Refuser un produit
-  const rejectProduct = async () => {
-    if (!rejectionReason.trim()) {
-      alert("Veuillez indiquer une raison de refus");
+  const handleClearSearch = () => {
+    setSearchTerm("");
+  };
+
+  // 📝 Sauvegarder (ajout ou modification)
+  const saveDomain = async () => {
+    if (!formData.nom_domaine) {
+      alert("Le nom du domaine est requis");
       return;
     }
 
     try {
-      const response = await api.put(`/${selectedProduct.id_produit}/refuser`, {
-        raison_refus: rejectionReason
-      });
-      if (response.data.success) {
-        setSuccessMessage(`❌ Produit "${selectedProduct.nom_produit}" refusé. Un email sera envoyé au vendeur.`);
-        setShowRejectModal(false);
-        setRejectionReason("");
-        setSelectedProduct(null);
-        fetchProducts();
-        setTimeout(() => setSuccessMessage(null), 4000);
-      } else {
-        setError(response.data.message || "Erreur lors du refus");
+      const submitData = new FormData();
+      submitData.append("nom_domaine", formData.nom_domaine);
+      submitData.append("description_domaine", formData.description_domaine || "");
+      
+      if (formData.image_domaine instanceof File) {
+        submitData.append("image", formData.image_domaine);
       }
+
+      if (formData.id_domaine) {
+        // Mode modification
+        await api.put(`/${formData.id_domaine}`, submitData, {
+          headers: { "Content-Type": "multipart/form-data" }
+        });
+      } else {
+        // Mode ajout
+        await api.post("/", submitData, {
+          headers: { "Content-Type": "multipart/form-data" }
+        });
+      }
+
+      await fetchDomaines();
+      
+      // Réinitialiser le formulaire
+      setFormData({
+        id_domaine: null,
+        nom_domaine: "",
+        description_domaine: "",
+        image_domaine: null,
+        imagePreview: null
+      });
+      setShowForm(false);
     } catch (err) {
-      console.error("Erreur refus:", err);
-      setError(err.response?.data?.message || "Erreur lors du refus");
+      console.error("Erreur sauvegarde:", err);
+      alert(err.response?.data?.message || "Erreur lors de la sauvegarde");
     }
   };
 
-  // 📊 Formater la date
-  const formatDate = (dateString) => {
-    if (!dateString) return "N/A";
-    const date = new Date(dateString);
-    return date.toLocaleDateString('fr-FR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+  // ✏️ Éditer un domaine
+  const editDomain = (domain) => {
+    setFormData({
+      id_domaine: domain.id_domaine,
+      nom_domaine: domain.nom_domaine,
+      description_domaine: domain.description_domaine || "",
+      image_domaine: null,
+      imagePreview: domain.image_domaine 
+        ? `http://localhost:5000/uploads/domaines/${domain.image_domaine}`
+        : null
     });
+    setShowForm(true);
   };
 
-  // 💰 Formater le prix
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('fr-FR', {
-      style: 'currency',
-      currency: 'EUR'
-    }).format(price);
+  // 🗑️ Supprimer un domaine
+  const deleteDomain = async (id) => {
+    if (window.confirm("Êtes-vous sûr de vouloir supprimer ce domaine ?")) {
+      try {
+        await api.delete(`/${id}`);
+        await fetchDomaines();
+      } catch (err) {
+        console.error("Erreur suppression:", err);
+        alert("Erreur lors de la suppression");
+      }
+    }
   };
 
-  // 🏷️ Obtenir le nom de la catégorie
-  const getCategoryName = (id_categorie) => {
-    const category = categories.find(c => c.id_categorie === id_categorie);
-    return category ? category.nom_categorie : "Catégorie inconnue";
+  // 🖼️ Gérer la sélection d'image
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Nettoyer l'ancienne preview si elle existe
+      if (formData.imagePreview) {
+        URL.revokeObjectURL(formData.imagePreview);
+      }
+      
+      setFormData({
+        ...formData,
+        image_domaine: file,
+        imagePreview: URL.createObjectURL(file)
+      });
+    }
   };
 
-  // 🏷️ Obtenir le nom du domaine
-  const getDomainName = (id_domaine) => {
-    const domain = domains.find(d => d.id_domaine === id_domaine);
-    return domain ? domain.nom_domaine : "Domaine inconnu";
-  };
-
-  const handleClearFilters = () => {
-    setSearchTerm("");
-    setSelectedCategory("");
-    setSelectedDomain("");
-  };
-
-  // Statistiques
-  const stats = {
-    total: products.length,
-    en_attente: products.filter(p => p.statut === 'en_attente').length,
-    actif: products.filter(p => p.statut === 'actif').length,
-    refuse: products.filter(p => p.statut === 'refuse').length
-  };
+  // Nettoyage des URLs ObjectURL au démontage
+  useEffect(() => {
+    return () => {
+      if (formData.imagePreview) {
+        URL.revokeObjectURL(formData.imagePreview);
+      }
+    };
+  }, [formData.imagePreview]);
 
   if (loading) {
     return (
-      <div className="products-page" style={{ textAlign: "center", padding: "60px" }}>
-        <div className="loading-spinner"></div>
-        <p>⏳ Chargement des produits {selectedStatus === 'en_attente' ? 'en attente' : ''}...</p>
+      <div className="domains-page" style={{ textAlign: "center", padding: "60px" }}>
+        ⏳ Chargement des domaines...
       </div>
     );
   }
 
   return (
-    <div className="products-page">
+    <div className="domains-page">
       <div className="header">
-        <div>
-          <h1>Gestion des produits</h1>
-          <p className="subtitle">Superviser et valider les produits soumis par les clients avant leur mise en vente aux enchères</p>
-        </div>
+        <h1>Mes domaines</h1>
 
         <div className="header-actions">
           <input
             type="text"
-            placeholder="Rechercher produit ou vendeur..."
+            placeholder="Rechercher un domaine..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="search-input"
           />
 
-          <select
-            value={selectedDomain}
-            onChange={(e) => setSelectedDomain(e.target.value)}
-            className="filter-select"
-          >
-            <option value="">Tous les domaines</option>
-            {domains.map(domain => (
-              <option key={domain.id_domaine} value={domain.id_domaine}>
-                {domain.nom_domaine}
-              </option>
-            ))}
-          </select>
-
-          <select
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="filter-select"
-          >
-            <option value="">Toutes les catégories</option>
-            {categories.map(category => (
-              <option key={category.id_categorie} value={category.id_categorie}>
-                {category.nom_categorie}
-              </option>
-            ))}
-          </select>
-
-          <select
-            value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.target.value)}
-            className="filter-select status-filter"
-          >
-            <option value="en_attente">⏳ En attente de validation</option>
-            <option value="actif">✅ Produits validés</option>
-            <option value="refuse">❌ Produits refusés</option>
-            <option value="tous">📋 Tous les produits</option>
-          </select>
-
-          <button className="refresh-btn" onClick={fetchProducts}>
+          <button className="add-btn" onClick={handleRefresh}>
             🔄 Actualiser
+          </button>
+
+          <button
+            className="add-btn"
+            onClick={() => {
+              setFormData({
+                id_domaine: null,
+                nom_domaine: "",
+                description_domaine: "",
+                image_domaine: null,
+                imagePreview: null
+              });
+              setShowForm(true);
+            }}
+          >
+            + Ajouter un domaine
           </button>
         </div>
       </div>
 
-      {/* Cartes statistiques */}
-      <div className="stats-row">
-        <div className="stat-card-mini">
-          <span className="stat-icon">📊</span>
-          <div>
-            <span className="stat-label">Total</span>
-            <span className="stat-value">{stats.total}</span>
-          </div>
-        </div>
-        <div className="stat-card-mini pending">
-          <span className="stat-icon">⏳</span>
-          <div>
-            <span className="stat-label">En attente</span>
-            <span className="stat-value">{stats.en_attente}</span>
-          </div>
-        </div>
-        <div className="stat-card-mini approved">
-          <span className="stat-icon">✅</span>
-          <div>
-            <span className="stat-label">Validés</span>
-            <span className="stat-value">{stats.actif}</span>
-          </div>
-        </div>
-        <div className="stat-card-mini rejected">
-          <span className="stat-icon">❌</span>
-          <div>
-            <span className="stat-label">Refusés</span>
-            <span className="stat-value">{stats.refuse}</span>
-          </div>
-        </div>
-      </div>
-
       {error && (
-        <div className="error-banner">
+        <div style={{
+          background: "#ffebee",
+          color: "#c62828",
+          padding: "15px",
+          borderRadius: "8px",
+          marginBottom: "20px",
+          border: "1px solid #ffcdd2"
+        }}>
           <strong>❌ Erreur</strong>
-          <p>{error}</p>
-          <button onClick={fetchProducts}>Réessayer</button>
+          <p style={{ marginTop: "5px", marginBottom: "0" }}>{error}</p>
+          <button 
+            onClick={fetchDomaines}
+            style={{
+              marginTop: "10px",
+              background: "#c62828",
+              color: "white",
+              border: "none",
+              padding: "5px 10px",
+              borderRadius: "5px",
+              cursor: "pointer"
+            }}
+          >
+            Réessayer
+          </button>
         </div>
       )}
 
-      {successMessage && (
-        <div className="success-banner">
-          <strong>✅ Succès</strong>
-          <p>{successMessage}</p>
-        </div>
-      )}
-
-      {/* Indicateur de filtres */}
-      {(searchTerm || selectedCategory || selectedDomain) && (
-        <div className="filters-info">
+      {/* Indicateur de recherche */}
+      {searchTerm && (
+        <div style={{
+          background: "#e3f2fd",
+          padding: "10px 15px",
+          borderRadius: "8px",
+          marginBottom: "20px",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: "10px"
+        }}>
           <span>
-            🔍 Filtres actifs : 
-            {searchTerm && <strong> "{searchTerm}"</strong>}
-            {selectedCategory && <strong> - {getCategoryName(parseInt(selectedCategory))}</strong>}
-            {selectedDomain && <strong> - {getDomainName(parseInt(selectedDomain))}</strong>}
-            <span className="filter-count">({filteredProducts.length} produit(s))</span>
+            🔍 Résultats : <strong>"{searchTerm}"</strong> ({filteredDomains.length} domaine(s))
           </span>
-          <button onClick={handleClearFilters}>✕ Effacer les filtres</button>
+          <button
+            onClick={handleClearSearch}
+            style={{
+              background: "#1976d2",
+              border: "none",
+              color: "white",
+              padding: "5px 12px",
+              borderRadius: "5px",
+              cursor: "pointer"
+            }}
+          >
+            ✕ Effacer
+          </button>
         </div>
       )}
 
-      {/* Liste des produits */}
-      {filteredProducts.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-icon">📦</div>
-          <p>Aucun produit {selectedStatus === 'en_attente' ? 'en attente de validation' : selectedStatus === 'actif' ? 'validé' : selectedStatus === 'refuse' ? 'refusé' : ''}</p>
-          {selectedStatus === 'en_attente' && (
-            <p className="empty-subtitle">Les produits soumis par les clients apparaîtront ici pour validation</p>
+      {/* Formulaire d'ajout/modification */}
+      {showForm && (
+        <div className="domain-card">
+          <div style={{ display: "flex", flexDirection: "column", gap: "15px", width: "100%" }}>
+            <input
+              type="text"
+              placeholder="Nom du domaine *"
+              value={formData.nom_domaine}
+              onChange={(e) => setFormData({ ...formData, nom_domaine: e.target.value })}
+            />
+
+            <textarea
+              placeholder="Description du domaine"
+              value={formData.description_domaine}
+              onChange={(e) => setFormData({ ...formData, description_domaine: e.target.value })}
+              rows="4"
+            />
+
+            {formData.imagePreview && (
+              <div style={{ marginTop: "10px" }}>
+                <img 
+                  src={formData.imagePreview} 
+                  alt="Aperçu" 
+                  style={{ width: "100px", height: "100px", objectFit: "cover", borderRadius: "8px" }}
+                />
+              </div>
+            )}
+
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleImageChange}
+            />
+
+            <div style={{ display: "flex", gap: "10px" }}>
+              <button className="add-btn" onClick={saveDomain}>
+                {formData.id_domaine ? "Mettre à jour" : "Ajouter"}
+              </button>
+              <button 
+                className="delete-btn" 
+                onClick={() => setShowForm(false)}
+                style={{ background: "#ccc", borderColor: "#ccc", color: "#333" }}
+              >
+                Annuler
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Liste des domaines */}
+      {filteredDomains.length === 0 && !showForm ? (
+        <div style={{
+          textAlign: "center",
+          padding: "60px",
+          color: "#666",
+          background: "white",
+          borderRadius: "15px"
+        }}>
+          {searchTerm ? (
+            <>
+              <p>❌ Aucun domaine trouvé pour <strong>"{searchTerm}"</strong></p>
+              <button className="add-btn" onClick={handleRefresh} style={{ marginTop: "15px" }}>
+                Afficher tous les domaines
+              </button>
+            </>
+          ) : (
+            <>
+              <p>📂 Aucun domaine pour le moment.</p>
+              <button className="add-btn" onClick={() => setShowForm(true)} style={{ marginTop: "15px" }}>
+                + Ajouter votre premier domaine
+              </button>
+            </>
           )}
         </div>
       ) : (
-        <div className="products-list">
-          {filteredProducts.map((product) => (
-            <div className="product-card" key={`product-${product.id_produit}`}>
-              {/* Image du produit */}
-              <div className="product-image">
-                <img
-                  src={product.image_produit 
-                    ? `http://localhost:5000/uploads/produits/${product.image_produit}`
-                    : "https://via.placeholder.com/120x120?text=Pas+d'image"}
-                  alt={product.nom_produit}
-                  onError={(e) => {
-                    e.target.src = "https://via.placeholder.com/120x120?text=Image+non+trouvée";
-                  }}
-                />
-              </div>
-
-              {/* Informations du produit */}
-              <div className="product-info">
-                <div className="product-header">
-                  <h3>{product.nom_produit}</h3>
-                  <span className={`status-badge ${product.statut}`}>
-                    {product.statut === 'en_attente' && '⏳ EN ATTENTE'}
-                    {product.statut === 'actif' && '✅ VALIDÉ'}
-                    {product.statut === 'refuse' && '❌ REFUSÉ'}
-                  </span>
-                </div>
-
-                <div className="product-details">
-                  <div className="detail-row">
-                    <span className="detail-label">💰 Prix de départ :</span>
-                    <span className="detail-value">{formatPrice(product.prix_depart)}</span>
-                  </div>
-                  <div className="detail-row">
-                    <span className="detail-label">📂 Domaine :</span>
-                    <span className="detail-value">{getDomainName(product.id_domaine)}</span>
-                  </div>
-                  <div className="detail-row">
-                    <span className="detail-label">🏷️ Catégorie :</span>
-                    <span className="detail-value">{getCategoryName(product.id_categorie)}</span>
-                  </div>
-                  <div className="detail-row">
-                    <span className="detail-label">👤 Vendeur :</span>
-                    <span className="detail-value">{product.vendeur_nom || product.vendeur_email || `ID: ${product.id_utilisateur}`}</span>
-                  </div>
-                  <div className="detail-row">
-                    <span className="detail-label">📅 Date de soumission :</span>
-                    <span className="detail-value">{formatDate(product.date_creation)}</span>
-                  </div>
-                  {product.description_produit && (
-                    <div className="detail-row description">
-                      <span className="detail-label">📝 Description :</span>
-                      <span className="detail-value">{product.description_produit.substring(0, 100)}...</span>
-                    </div>
-                  )}
-                  {product.raison_refus && product.statut === 'refuse' && (
-                    <div className="detail-row rejection-reason">
-                      <span className="detail-label">⚠️ Raison du refus :</span>
-                      <span className="detail-value">{product.raison_refus}</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Boutons d'action */}
-                <div className="product-actions">
-                  <button 
-                    className="view-btn"
-                    onClick={() => {
-                      setSelectedProduct(product);
-                      setShowDetailsModal(true);
-                    }}
-                  >
-                    👁️ Voir détails
-                  </button>
-                  
-                  {product.statut === 'en_attente' && (
-                    <>
-                      <button 
-                        className="validate-btn"
-                        onClick={() => validateProduct(product)}
-                      >
-                        ✅ Valider
-                      </button>
-                      <button 
-                        className="reject-btn"
-                        onClick={() => {
-                          setSelectedProduct(product);
-                          setShowRejectModal(true);
-                        }}
-                      >
-                        ❌ Refuser
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Modal Détails du produit */}
-      {showDetailsModal && selectedProduct && (
-        <div className="modal-overlay" onClick={() => setShowDetailsModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>📦 Détails du produit</h2>
-              <button className="modal-close" onClick={() => setShowDetailsModal(false)}>✕</button>
-            </div>
-            <div className="modal-body">
-              <div className="detail-product-image">
-                <img
-                  src={selectedProduct.image_produit 
-                    ? `http://localhost:5000/uploads/produits/${selectedProduct.image_produit}`
-                    : "https://via.placeholder.com/300x300?text=Pas+d'image"}
-                  alt={selectedProduct.nom_produit}
-                />
-              </div>
-              <div className="detail-info">
-                <h3>{selectedProduct.nom_produit}</h3>
-                <p className="detail-price">{formatPrice(selectedProduct.prix_depart)}</p>
-                <div className="detail-grid">
-                  <p><strong>📂 Domaine :</strong> {getDomainName(selectedProduct.id_domaine)}</p>
-                  <p><strong>🏷️ Catégorie :</strong> {getCategoryName(selectedProduct.id_categorie)}</p>
-                  <p><strong>👤 Vendeur :</strong> {selectedProduct.vendeur_nom || selectedProduct.vendeur_email}</p>
-                  <p><strong>📅 Date de soumission :</strong> {formatDate(selectedProduct.date_creation)}</p>
-                  <p><strong>🏷️ Statut :</strong> 
-                    <span className={`status-badge ${selectedProduct.statut}`} style={{ marginLeft: '8px' }}>
-                      {selectedProduct.statut === 'en_attente' && '⏳ EN ATTENTE'}
-                      {selectedProduct.statut === 'actif' && '✅ VALIDÉ'}
-                      {selectedProduct.statut === 'refuse' && '❌ REFUSÉ'}
-                    </span>
-                  </p>
-                </div>
-                <p><strong>📝 Description complète :</strong></p>
-                <p className="detail-description">{selectedProduct.description_produit || "Aucune description"}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Refus */}
-      {showRejectModal && selectedProduct && (
-        <div className="modal-overlay" onClick={() => setShowRejectModal(false)}>
-          <div className="modal-content reject-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>❌ Refuser le produit</h2>
-              <button className="modal-close" onClick={() => setShowRejectModal(false)}>✕</button>
-            </div>
-            <div className="modal-body">
-              <p>Produit : <strong>{selectedProduct.nom_produit}</strong></p>
-              <p>Vendeur : <strong>{selectedProduct.vendeur_nom || selectedProduct.vendeur_email}</strong></p>
-              <label>Raison du refus :</label>
-              <textarea
-                value={rejectionReason}
-                onChange={(e) => setRejectionReason(e.target.value)}
-                placeholder="Indiquez pourquoi ce produit est refusé (sera communiqué au vendeur)..."
-                rows="4"
+        // ✅ Clés uniques avec préfixe pour éviter les conflits
+        filteredDomains.map((domain) => (
+          <div className="domain-card" key={`domaine-${domain.id_domaine}`}>
+            <div className="domain-image">
+              <img
+                src={
+                  domain.image_domaine 
+                    ? `http://localhost:5000/uploads/domaines/${domain.image_domaine}`
+                    : "https://via.placeholder.com/250?text=Pas+d'image"
+                }
+                alt={domain.nom_domaine}
+                onError={(e) => {
+                  e.target.src = "https://via.placeholder.com/250?text=Image+non+trouvée";
+                }}
               />
-              <div className="modal-actions">
-                <button className="cancel-btn" onClick={() => {
-                  setShowRejectModal(false);
-                  setRejectionReason("");
-                }}>Annuler</button>
-                <button className="reject-confirm-btn" onClick={rejectProduct}>Confirmer le refus</button>
+            </div>
+
+            <div className="domain-info">
+              <h2>{domain.nom_domaine}</h2>
+              <p>{domain.description_domaine || "Aucune description"}</p>
+
+              <div className="actions">
+                <button className="edit-btn" onClick={() => editDomain(domain)}>
+                  ✏️ Modifier
+                </button>
+                <button className="delete-btn" onClick={() => deleteDomain(domain.id_domaine)}>
+                  🗑️ Supprimer
+                </button>
               </div>
             </div>
           </div>
-        </div>
+        ))
       )}
     </div>
   );
 }
 
-export default ProductsPage;
+export default DomainesPage;
