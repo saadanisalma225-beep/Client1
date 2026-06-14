@@ -1,26 +1,18 @@
-// ProductsPage.js - Version complète
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import "./ProductsPage.css";
 
 const API_BASE_URL = "http://localhost:5000/api";
-const API_URL = `${API_BASE_URL}/admin/produits`;
 
-// Configuration axios
 const api = axios.create({
-  baseURL: API_URL,
-  headers: {
-    "Content-Type": "application/json",
-  },
+  baseURL: API_BASE_URL,
+  headers: { "Content-Type": "application/json" },
 });
 
-// Interceptor pour ajouter le token d'authentification
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("adminToken");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+    if (token) config.headers.Authorization = `Bearer ${token}`;
     return config;
   },
   (error) => Promise.reject(error)
@@ -36,17 +28,16 @@ function ProductsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedDomain, setSelectedDomain] = useState("");
-  const [selectedStatus, setSelectedStatus] = useState("en_attente");
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
-  const [rejectionReason, setRejectionReason] = useState("");
   const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
-  // 📥 Charger les produits
   const fetchProducts = async () => {
     setLoading(true);
     try {
-      const response = await api.get(`/?statut=${selectedStatus}`);
+      const response = await api.get("/admin/produit/");
       if (response.data.success) {
         setProducts(response.data.produits || []);
         setError(null);
@@ -55,11 +46,10 @@ function ProductsPage() {
         setError(response.data.message || "Erreur de chargement");
       }
     } catch (err) {
-      console.error("Erreur chargement produits:", err);
       if (err.code === 'ERR_NETWORK') {
-        setError("❌ Impossible de joindre le serveur. Vérifiez que le backend tourne sur http://localhost:5000");
+        setError("❌ Impossible de joindre le serveur");
       } else if (err.response?.status === 401) {
-        setError("❌ Non authentifié. Veuillez vous reconnecter.");
+        setError("❌ Non authentifié");
       } else {
         setError(`❌ Erreur: ${err.response?.data?.message || err.message}`);
       }
@@ -68,15 +58,10 @@ function ProductsPage() {
     }
   };
 
-  // 📥 Charger les catégories et domaines pour les filtres
   const fetchCategories = async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/admin/categorie/`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("adminToken")}` }
-      });
-      if (response.data.success) {
-        setCategories(response.data.categories || []);
-      }
+      const response = await api.get("/admin/categorie/");
+      if (response.data.success) setCategories(response.data.categories || []);
     } catch (err) {
       console.error("Erreur chargement catégories:", err);
     }
@@ -84,12 +69,8 @@ function ProductsPage() {
 
   const fetchDomains = async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/admin/domaine/`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("adminToken")}` }
-      });
-      if (response.data.success) {
-        setDomains(response.data.domaines || []);
-      }
+      const response = await api.get("/admin/domaine/");
+      if (response.data.success) setDomains(response.data.domaines || []);
     } catch (err) {
       console.error("Erreur chargement domaines:", err);
     }
@@ -99,117 +80,155 @@ function ProductsPage() {
     fetchProducts();
     fetchCategories();
     fetchDomains();
-  }, [selectedStatus]);
+  }, []);
+
+  // 🎯 Auto-select first domain and first category when data loads
+  useEffect(() => {
+    if (domains.length > 0 && !selectedDomain) {
+      const firstDomain = domains[0];
+      setSelectedDomain(String(firstDomain.id_domaine));
+
+      // Find first category belonging to this domain
+      const catsForDomain = categories.filter(c => c.id_domaine === firstDomain.id_domaine);
+      if (catsForDomain.length > 0) {
+        setSelectedCategory(String(catsForDomain[0].id_categorie));
+      }
+    }
+  }, [domains, categories]);
 
   // 🔍 Filtrer les produits
   const filteredProducts = products.filter((product) => {
-    const matchSearch = product.nom_produit?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        product.vendeur_nom?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        product.vendeur_email?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchCategory = selectedCategory ? product.id_categorie === parseInt(selectedCategory) : true;
-    const matchDomain = selectedDomain ? product.id_domaine === parseInt(selectedDomain) : true;
+    const matchSearch = product.nom_produit?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchCategory = selectedCategory 
+      ? product.id_categorie_produit === parseInt(selectedCategory) 
+      : true;
+    const matchDomain = selectedDomain 
+      ? (() => {
+          const cat = categories.find(c => c.id_categorie === product.id_categorie_produit);
+          return cat && cat.id_domaine === parseInt(selectedDomain);
+        })()
+      : true;
     return matchSearch && matchCategory && matchDomain;
   });
 
-  // ✅ Valider un produit
+  // 🖼️ Get all image URLs
+  const getAllImages = (product) => {
+    const images = product.produit_image_produit || [];
+    if (Array.isArray(images)) return images;
+    try {
+      const parsed = JSON.parse(images);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const getFirstImage = (product) => {
+    const images = getAllImages(product);
+    return images.length > 0 ? images[0] : null;
+  };
+
+  const getImageUrl = (filename) => `http://localhost:5000/uploads/produits/${filename}`;
+
   const validateProduct = async (product) => {
-    if (window.confirm(`Valider le produit "${product.nom_produit}" ? Il sera mis en vente aux enchères immédiatement.`)) {
+    if (window.confirm(`Approuver l'expertise du produit "${product.nom_produit}" ?`)) {
       try {
-        const response = await api.put(`/${product.id_produit}/valider`);
+        const response = await api.put(`/admin/produit/${product.id_produit}`, {
+          expertise_approuved_produit: true
+        });
         if (response.data.success) {
-          setSuccessMessage(`✅ Produit "${product.nom_produit}" validé avec succès ! Il est maintenant visible sur la plateforme.`);
+          setSuccessMessage(`✅ Expertise approuvée pour "${product.nom_produit}"`);
           fetchProducts();
           setTimeout(() => setSuccessMessage(null), 4000);
-        } else {
-          setError(response.data.message || "Erreur lors de la validation");
         }
       } catch (err) {
-        console.error("Erreur validation:", err);
-        setError(err.response?.data?.message || "Erreur lors de la validation");
-        setTimeout(() => setError(null), 4000);
+        setError(err.response?.data?.message || "Erreur lors de l'approbation");
       }
     }
   };
 
-  // ❌ Refuser un produit
   const rejectProduct = async () => {
     if (!rejectionReason.trim()) {
       alert("Veuillez indiquer une raison de refus");
       return;
     }
-
     try {
-      const response = await api.put(`/${selectedProduct.id_produit}/refuser`, {
-        raison_refus: rejectionReason
+      const response = await api.put(`/admin/produit/${selectedProduct.id_produit}`, {
+        expertise_approuved_produit: false,
+        a_expertise_produit: false
       });
       if (response.data.success) {
-        setSuccessMessage(`❌ Produit "${selectedProduct.nom_produit}" refusé. Un email sera envoyé au vendeur.`);
+        setSuccessMessage(`❌ Expertise refusée pour "${selectedProduct.nom_produit}"`);
         setShowRejectModal(false);
         setRejectionReason("");
         setSelectedProduct(null);
         fetchProducts();
         setTimeout(() => setSuccessMessage(null), 4000);
-      } else {
-        setError(response.data.message || "Erreur lors du refus");
       }
     } catch (err) {
-      console.error("Erreur refus:", err);
       setError(err.response?.data?.message || "Erreur lors du refus");
     }
   };
 
-  // 📊 Formater la date
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
     const date = new Date(dateString);
     return date.toLocaleDateString('fr-FR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit'
     });
   };
 
-  // 💰 Formater le prix
   const formatPrice = (price) => {
-    return new Intl.NumberFormat('fr-FR', {
-      style: 'currency',
-      currency: 'EUR'
-    }).format(price);
+    if (price === null || price === undefined) return "N/A";
+    return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(price);
   };
 
-  // 🏷️ Obtenir le nom de la catégorie
   const getCategoryName = (id_categorie) => {
     const category = categories.find(c => c.id_categorie === id_categorie);
     return category ? category.nom_categorie : "Catégorie inconnue";
   };
 
-  // 🏷️ Obtenir le nom du domaine
-  const getDomainName = (id_domaine) => {
-    const domain = domains.find(d => d.id_domaine === id_domaine);
-    return domain ? domain.nom_domaine : "Domaine inconnu";
-  };
+  const filteredCategories = selectedDomain
+    ? categories.filter(c => c.id_domaine === parseInt(selectedDomain))
+    : categories;
 
   const handleClearFilters = () => {
     setSearchTerm("");
-    setSelectedCategory("");
-    setSelectedDomain("");
+    // Reset to first domain and its first category
+    if (domains.length > 0) {
+      const firstDomain = domains[0];
+      setSelectedDomain(String(firstDomain.id_domaine));
+      const catsForDomain = categories.filter(c => c.id_domaine === firstDomain.id_domaine);
+      if (catsForDomain.length > 0) {
+        setSelectedCategory(String(catsForDomain[0].id_categorie));
+      } else {
+        setSelectedCategory("");
+      }
+    } else {
+      setSelectedCategory("");
+      setSelectedDomain("");
+    }
   };
 
-  // Statistiques
+  const openDetails = (product) => {
+    setSelectedProduct(product);
+    setCurrentImageIndex(0);
+    setShowDetailsModal(true);
+  };
+
   const stats = {
     total: products.length,
-    en_attente: products.filter(p => p.statut === 'en_attente').length,
-    actif: products.filter(p => p.statut === 'actif').length,
-    refuse: products.filter(p => p.statut === 'refuse').length
+    en_attente: products.filter(p => p.a_expertise_produit && !p.expertise_approuved_produit).length,
+    actif: products.filter(p => p.expertise_approuved_produit).length,
+    refuse: products.filter(p => !p.a_expertise_produit).length
   };
 
   if (loading) {
     return (
       <div className="products-page" style={{ textAlign: "center", padding: "60px" }}>
         <div className="loading-spinner"></div>
-        <p>⏳ Chargement des produits {selectedStatus === 'en_attente' ? 'en attente' : ''}...</p>
+        <p>⏳ Chargement...</p>
       </div>
     );
   }
@@ -219,13 +238,13 @@ function ProductsPage() {
       <div className="header">
         <div>
           <h1>Gestion des produits</h1>
-          <p className="subtitle">Superviser et valider les produits soumis par les clients avant leur mise en vente aux enchères</p>
+          <p className="subtitle">Superviser et valider les produits soumis par les clients</p>
         </div>
 
         <div className="header-actions">
           <input
             type="text"
-            placeholder="Rechercher produit ou vendeur..."
+            placeholder="Rechercher un produit..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="search-input"
@@ -233,10 +252,19 @@ function ProductsPage() {
 
           <select
             value={selectedDomain}
-            onChange={(e) => setSelectedDomain(e.target.value)}
+            onChange={(e) => {
+              const newDomain = e.target.value;
+              setSelectedDomain(newDomain);
+              // Auto-select first category of new domain
+              const catsForDomain = categories.filter(c => c.id_domaine === parseInt(newDomain));
+              if (catsForDomain.length > 0) {
+                setSelectedCategory(String(catsForDomain[0].id_categorie));
+              } else {
+                setSelectedCategory("");
+              }
+            }}
             className="filter-select"
           >
-            <option value="">Tous les domaines</option>
             {domains.map(domain => (
               <option key={domain.id_domaine} value={domain.id_domaine}>
                 {domain.nom_domaine}
@@ -249,32 +277,24 @@ function ProductsPage() {
             onChange={(e) => setSelectedCategory(e.target.value)}
             className="filter-select"
           >
-            <option value="">Toutes les catégories</option>
-            {categories.map(category => (
+            {filteredCategories.map(category => (
               <option key={category.id_categorie} value={category.id_categorie}>
                 {category.nom_categorie}
               </option>
             ))}
           </select>
 
-          <select
-            value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.target.value)}
-            className="filter-select status-filter"
+          <button 
+            className="refresh-btn" 
+            onClick={fetchProducts}
+            title="Actualiser"
           >
-            <option value="en_attente">⏳ En attente de validation</option>
-            <option value="actif">✅ Produits validés</option>
-            <option value="refuse">❌ Produits refusés</option>
-            <option value="tous">📋 Tous les produits</option>
-          </select>
-
-          <button className="refresh-btn" onClick={fetchProducts}>
-            🔄 Actualiser
+            🔄
           </button>
         </div>
       </div>
 
-      {/* Cartes statistiques */}
+      {/* Stats */}
       <div className="stats-row">
         <div className="stat-card-mini">
           <span className="stat-icon">📊</span>
@@ -310,7 +330,7 @@ function ProductsPage() {
         <div className="error-banner">
           <strong>❌ Erreur</strong>
           <p>{error}</p>
-          <button onClick={fetchProducts}>Réessayer</button>
+          <button onClick={() => setError(null)}>Fermer</button>
         </div>
       )}
 
@@ -321,131 +341,113 @@ function ProductsPage() {
         </div>
       )}
 
-      {/* Indicateur de filtres */}
+      {/* Filters info */}
       {(searchTerm || selectedCategory || selectedDomain) && (
         <div className="filters-info">
           <span>
-            🔍 Filtres actifs : 
-            {searchTerm && <strong> "{searchTerm}"</strong>}
-            {selectedCategory && <strong> - {getCategoryName(parseInt(selectedCategory))}</strong>}
-            {selectedDomain && <strong> - {getDomainName(parseInt(selectedDomain))}</strong>}
-            <span className="filter-count">({filteredProducts.length} produit(s))</span>
+            🔍 Filtres actifs :
+            {selectedDomain && <strong> {domains.find(d => d.id_domaine === parseInt(selectedDomain))?.nom_domaine}</strong>}
+            {selectedCategory && <strong> / {getCategoryName(parseInt(selectedCategory))}</strong>}
+            {searchTerm && <strong> / "{searchTerm}"</strong>}
+            <span className="filter-count"> ({filteredProducts.length} produit(s))</span>
           </span>
-          <button onClick={handleClearFilters}>✕ Effacer les filtres</button>
+          <button onClick={handleClearFilters}>✕ Réinitialiser</button>
         </div>
       )}
 
-      {/* Liste des produits */}
+      {/* Products List */}
       {filteredProducts.length === 0 ? (
         <div className="empty-state">
           <div className="empty-icon">📦</div>
-          <p>Aucun produit {selectedStatus === 'en_attente' ? 'en attente de validation' : selectedStatus === 'actif' ? 'validé' : selectedStatus === 'refuse' ? 'refusé' : ''}</p>
-          {selectedStatus === 'en_attente' && (
-            <p className="empty-subtitle">Les produits soumis par les clients apparaîtront ici pour validation</p>
-          )}
+          <p>Aucun produit trouvé dans cette catégorie</p>
         </div>
       ) : (
         <div className="products-list">
-          {filteredProducts.map((product) => (
-            <div className="product-card" key={`product-${product.id_produit}`}>
-              {/* Image du produit */}
-              <div className="product-image">
-                <img
-                  src={product.image_produit 
-                    ? `http://localhost:5000/uploads/produits/${product.image_produit}`
-                    : "https://via.placeholder.com/120x120?text=Pas+d'image"}
-                  alt={product.nom_produit}
-                  onError={(e) => {
-                    e.target.src = "https://via.placeholder.com/120x120?text=Image+non+trouvée";
-                  }}
-                />
-              </div>
-
-              {/* Informations du produit */}
-              <div className="product-info">
-                <div className="product-header">
-                  <h3>{product.nom_produit}</h3>
-                  <span className={`status-badge ${product.statut}`}>
-                    {product.statut === 'en_attente' && '⏳ EN ATTENTE'}
-                    {product.statut === 'actif' && '✅ VALIDÉ'}
-                    {product.statut === 'refuse' && '❌ REFUSÉ'}
-                  </span>
-                </div>
-
-                <div className="product-details">
-                  <div className="detail-row">
-                    <span className="detail-label">💰 Prix de départ :</span>
-                    <span className="detail-value">{formatPrice(product.prix_depart)}</span>
-                  </div>
-                  <div className="detail-row">
-                    <span className="detail-label">📂 Domaine :</span>
-                    <span className="detail-value">{getDomainName(product.id_domaine)}</span>
-                  </div>
-                  <div className="detail-row">
-                    <span className="detail-label">🏷️ Catégorie :</span>
-                    <span className="detail-value">{getCategoryName(product.id_categorie)}</span>
-                  </div>
-                  <div className="detail-row">
-                    <span className="detail-label">👤 Vendeur :</span>
-                    <span className="detail-value">{product.vendeur_nom || product.vendeur_email || `ID: ${product.id_utilisateur}`}</span>
-                  </div>
-                  <div className="detail-row">
-                    <span className="detail-label">📅 Date de soumission :</span>
-                    <span className="detail-value">{formatDate(product.date_creation)}</span>
-                  </div>
-                  {product.description_produit && (
-                    <div className="detail-row description">
-                      <span className="detail-label">📝 Description :</span>
-                      <span className="detail-value">{product.description_produit.substring(0, 100)}...</span>
-                    </div>
-                  )}
-                  {product.raison_refus && product.statut === 'refuse' && (
-                    <div className="detail-row rejection-reason">
-                      <span className="detail-label">⚠️ Raison du refus :</span>
-                      <span className="detail-value">{product.raison_refus}</span>
-                    </div>
+          {filteredProducts.map((product) => {
+            const images = getAllImages(product);
+            return (
+              <div className="product-card" key={`product-${product.id_produit}`}>
+                <div className="product-image">
+                  <img
+                    src={getFirstImage(product) ? getImageUrl(getFirstImage(product)) : "https://via.placeholder.com/120x120?text=Pas+d'image"}
+                    alt={product.nom_produit}
+                    onError={(e) => { e.target.src = "https://via.placeholder.com/120x120?text=Image+non+trouvée"; }}
+                  />
+                  {images.length > 1 && (
+                    <span className="image-count">+{images.length - 1}</span>
                   )}
                 </div>
 
-                {/* Boutons d'action */}
-                <div className="product-actions">
-                  <button 
-                    className="view-btn"
-                    onClick={() => {
-                      setSelectedProduct(product);
-                      setShowDetailsModal(true);
-                    }}
-                  >
-                    👁️ Voir détails
-                  </button>
-                  
-                  {product.statut === 'en_attente' && (
-                    <>
-                      <button 
-                        className="validate-btn"
-                        onClick={() => validateProduct(product)}
-                      >
-                        ✅ Valider
+                <div className="product-info">
+                  <div className="product-header">
+                    <h3>{product.nom_produit}</h3>
+                    <span className={`status-badge ${
+                      product.expertise_approuved_produit ? 'actif' : 
+                      product.a_expertise_produit ? 'en_attente' : 'refuse'
+                    }`}>
+                      {product.expertise_approuved_produit && '✅ APPROUVÉ'}
+                      {!product.expertise_approuved_produit && product.a_expertise_produit && '⏳ EN ATTENTE'}
+                      {!product.a_expertise_produit && '❌ SANS EXPERTISE'}
+                    </span>
+                  </div>
+
+                  <div className="product-details">
+                    <div className="detail-row">
+                      <span className="detail-label">💰 Prix départ :</span>
+                      <span className="detail-value">{formatPrice(product.prix_debut_produit)}</span>
+                    </div>
+                    {product.prix_fin_produit && (
+                      <div className="detail-row">
+                        <span className="detail-label">💰 Prix final :</span>
+                        <span className="detail-value">{formatPrice(product.prix_fin_produit)}</span>
+                      </div>
+                    )}
+                    <div className="detail-row">
+                      <span className="detail-label">📂 Domaine :</span>
+                      <span className="detail-value">{product.nom_domaine || "Domaine inconnu"}</span>
+                    </div>
+                    <div className="detail-row">
+                      <span className="detail-label">🏷️ Catégorie :</span>
+                      <span className="detail-value">{product.nom_categorie || getCategoryName(product.id_categorie_produit)}</span>
+                    </div>
+                    <div className="detail-row">
+                      <span className="detail-label">📅 Date :</span>
+                      <span className="detail-value">{formatDate(product.date_publication_produit)}</span>
+                    </div>
+                    {product.description_produit && (
+                      <div className="detail-row description">
+                        <span className="detail-label">📝 Description :</span>
+                        <span className="detail-value">{product.description_produit.substring(0, 100)}...</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="product-actions">
+                    <button className="view-btn" onClick={() => openDetails(product)}>
+                      👁️ Voir détails
+                    </button>
+                    {product.a_expertise_produit && !product.expertise_approuved_produit && (
+                      <button className="validate-btn" onClick={() => validateProduct(product)}>
+                        ✅ Approuver
                       </button>
-                      <button 
-                        className="reject-btn"
-                        onClick={() => {
-                          setSelectedProduct(product);
-                          setShowRejectModal(true);
-                        }}
-                      >
+                    )}
+                    {product.a_expertise_produit && !product.expertise_approuved_produit && (
+                      <button className="reject-btn" onClick={() => {
+                        setSelectedProduct(product);
+                        setShowRejectModal(true);
+                      }}>
                         ❌ Refuser
                       </button>
-                    </>
-                  )}
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
-      {/* Modal Détails du produit */}
+      {/* Modal Détails avec Gallery */}
       {showDetailsModal && selectedProduct && (
         <div className="modal-overlay" onClick={() => setShowDetailsModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -454,28 +456,68 @@ function ProductsPage() {
               <button className="modal-close" onClick={() => setShowDetailsModal(false)}>✕</button>
             </div>
             <div className="modal-body">
-              <div className="detail-product-image">
-                <img
-                  src={selectedProduct.image_produit 
-                    ? `http://localhost:5000/uploads/produits/${selectedProduct.image_produit}`
-                    : "https://via.placeholder.com/300x300?text=Pas+d'image"}
-                  alt={selectedProduct.nom_produit}
-                />
-              </div>
+              {(() => {
+                const images = getAllImages(selectedProduct);
+                return images.length > 0 ? (
+                  <div className="image-gallery">
+                    <div className="gallery-main">
+                      <img
+                        src={getImageUrl(images[currentImageIndex])}
+                        alt={`${selectedProduct.nom_produit} ${currentImageIndex + 1}`}
+                        onError={(e) => { e.target.src = "https://via.placeholder.com/400x300?text=Image+non+trouvée"; }}
+                      />
+                      {images.length > 1 && (
+                        <>
+                          <button 
+                            className="gallery-nav prev" 
+                            onClick={() => setCurrentImageIndex(prev => prev === 0 ? images.length - 1 : prev - 1)}
+                          >
+                            ‹
+                          </button>
+                          <button 
+                            className="gallery-nav next" 
+                            onClick={() => setCurrentImageIndex(prev => prev === images.length - 1 ? 0 : prev + 1)}
+                          >
+                            ›
+                          </button>
+                          <div className="gallery-counter">
+                            {currentImageIndex + 1} / {images.length}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                    {images.length > 1 && (
+                      <div className="gallery-thumbnails">
+                        {images.map((img, idx) => (
+                          <img
+                            key={idx}
+                            src={getImageUrl(img)}
+                            alt={`Miniature ${idx + 1}`}
+                            className={idx === currentImageIndex ? 'active' : ''}
+                            onClick={() => setCurrentImageIndex(idx)}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="detail-product-image">
+                    <img src="https://via.placeholder.com/300x300?text=Pas+d'image" alt="Pas d'image" />
+                  </div>
+                );
+              })()}
+
               <div className="detail-info">
                 <h3>{selectedProduct.nom_produit}</h3>
-                <p className="detail-price">{formatPrice(selectedProduct.prix_depart)}</p>
+                <p className="detail-price">{formatPrice(selectedProduct.prix_debut_produit)}</p>
                 <div className="detail-grid">
-                  <p><strong>📂 Domaine :</strong> {getDomainName(selectedProduct.id_domaine)}</p>
-                  <p><strong>🏷️ Catégorie :</strong> {getCategoryName(selectedProduct.id_categorie)}</p>
-                  <p><strong>👤 Vendeur :</strong> {selectedProduct.vendeur_nom || selectedProduct.vendeur_email}</p>
-                  <p><strong>📅 Date de soumission :</strong> {formatDate(selectedProduct.date_creation)}</p>
-                  <p><strong>🏷️ Statut :</strong> 
-                    <span className={`status-badge ${selectedProduct.statut}`} style={{ marginLeft: '8px' }}>
-                      {selectedProduct.statut === 'en_attente' && '⏳ EN ATTENTE'}
-                      {selectedProduct.statut === 'actif' && '✅ VALIDÉ'}
-                      {selectedProduct.statut === 'refuse' && '❌ REFUSÉ'}
-                    </span>
+                  <p><strong>📂 Domaine :</strong> {selectedProduct.nom_domaine || "Domaine inconnu"}</p>
+                  <p><strong>🏷️ Catégorie :</strong> {selectedProduct.nom_categorie || getCategoryName(selectedProduct.id_categorie_produit)}</p>
+                  <p><strong>📅 Date :</strong> {formatDate(selectedProduct.date_publication_produit)}</p>
+                  <p><strong>🏷️ État :</strong> {selectedProduct.etat_produit}</p>
+                  <p><strong>🔍 Expertise :</strong> 
+                    {selectedProduct.expertise_approuved_produit ? ' ✅ Approuvée' : 
+                     selectedProduct.a_expertise_produit ? ' ⏳ En attente' : ' ❌ Sans expertise'}
                   </p>
                 </div>
                 <p><strong>📝 Description complète :</strong></p>
@@ -491,17 +533,16 @@ function ProductsPage() {
         <div className="modal-overlay" onClick={() => setShowRejectModal(false)}>
           <div className="modal-content reject-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>❌ Refuser le produit</h2>
+              <h2>❌ Refuser l'expertise</h2>
               <button className="modal-close" onClick={() => setShowRejectModal(false)}>✕</button>
             </div>
             <div className="modal-body">
               <p>Produit : <strong>{selectedProduct.nom_produit}</strong></p>
-              <p>Vendeur : <strong>{selectedProduct.vendeur_nom || selectedProduct.vendeur_email}</strong></p>
               <label>Raison du refus :</label>
               <textarea
                 value={rejectionReason}
                 onChange={(e) => setRejectionReason(e.target.value)}
-                placeholder="Indiquez pourquoi ce produit est refusé (sera communiqué au vendeur)..."
+                placeholder="Indiquez pourquoi cette expertise est refusée..."
                 rows="4"
               />
               <div className="modal-actions">

@@ -1,13 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import "./DomainesPage.css";
 
-// 2. Token corrigé : "adminToken" (au lieu de "token")
-// 3. Gestion d'image améliorée avec nettoyage mémoire
-// =============================================
-
 const API_BASE_URL = "http://localhost:5000/api";
-const API_URL = `${API_BASE_URL}/admin/domaine`;  // ✅ CORRIGÉ
+const API_URL = `${API_BASE_URL}/admin/domaine`;
 
 // Configuration axios
 const api = axios.create({
@@ -20,18 +16,13 @@ const api = axios.create({
 // Interceptor pour ajouter le token d'authentification
 api.interceptors.request.use(
   (config) => {
-    // ✅ CORRIGÉ: utiliser "adminToken" au lieu de "token"
     const token = localStorage.getItem("adminToken");
-    console.log("🔑 Token présent:", !!token);
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
-  (error) => {
-    console.error("❌ Erreur interceptor:", error);
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
 function DomainesPage() {
@@ -44,36 +35,42 @@ function DomainesPage() {
     id_domaine: null,
     nom_domaine: "",
     description_domaine: "",
-    image_domaine: null,
-    imagePreview: null
+    image_domaine: ""
+  });
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [deleteError, setDeleteError] = useState(null);
+
+  // Ref for scrolling to form
+  const formRef = useRef(null);
+
+  // Delete confirmation modal state
+  const [deleteModal, setDeleteModal] = useState({
+    open: false,
+    domaine: null,
+    categoryCount: 0,
+    productCount: 0,
+    loading: false
   });
 
-  // 📥 Charger les domaines depuis l'API
+  // 📥 Charger les domaines
   const fetchDomaines = async () => {
     setLoading(true);
-    console.log("📡 Appel API:", API_URL);
-    
     try {
       const response = await api.get("/");
-      console.log("✅ Réponse reçue:", response.data);
-      
       if (response.data.success) {
         setDomains(response.data.domaines || []);
         setError(null);
       } else {
         setDomains([]);
-        setError("Erreur: " + (response.data.message || "Données invalides"));
+        setError(response.data.message || "Erreur de chargement");
       }
     } catch (err) {
-      console.error("❌ Erreur détaillée:", err);
-      
-      // Messages d'erreur précis
+      console.error("Erreur chargement domaines:", err);
       if (err.code === 'ERR_NETWORK') {
         setError("❌ Impossible de joindre le serveur. Vérifiez que le backend tourne sur http://localhost:5000");
       } else if (err.response?.status === 401) {
         setError("❌ Non authentifié. Veuillez vous reconnecter.");
-      } else if (err.response?.status === 404) {
-        setError("❌ API non trouvée. Vérifiez l'URL: /api/admin/domaine");
       } else {
         setError(`❌ Erreur: ${err.response?.data?.message || err.message}`);
       }
@@ -100,6 +97,12 @@ function DomainesPage() {
     setSearchTerm("");
   };
 
+  // 🖼️ Get image URL
+  const getImageUrl = (filename) => {
+    if (!filename) return null;
+    return `http://localhost:5000/uploads/domaines/${filename}`;
+  };
+
   // 📝 Sauvegarder (ajout ou modification)
   const saveDomain = async () => {
     if (!formData.nom_domaine) {
@@ -108,95 +111,138 @@ function DomainesPage() {
     }
 
     try {
-      const submitData = new FormData();
-      submitData.append("nom_domaine", formData.nom_domaine);
-      submitData.append("description_domaine", formData.description_domaine || "");
-      
-      if (formData.image_domaine instanceof File) {
-        submitData.append("image", formData.image_domaine);
+      const data = new FormData();
+      data.append("nom_domaine", formData.nom_domaine);
+      data.append("description_domaine", formData.description_domaine || "");
+
+      if (selectedImage) {
+        data.append("image", selectedImage);
+      } else if (formData.id_domaine && formData.image_domaine) {
+        data.append("keep_image", "true");
+        data.append("existing_image", formData.image_domaine);
       }
 
       if (formData.id_domaine) {
-        // Mode modification
-        await api.put(`/${formData.id_domaine}`, submitData, {
-          headers: { "Content-Type": "multipart/form-data" }
+        await axios.put(`${API_URL}/${formData.id_domaine}`, data, {
+          headers: { 
+            Authorization: `Bearer ${localStorage.getItem("adminToken")}`,
+            "Content-Type": "multipart/form-data"
+          }
         });
       } else {
-        // Mode ajout
-        await api.post("/", submitData, {
-          headers: { "Content-Type": "multipart/form-data" }
+        await axios.post(`${API_URL}/`, data, {
+          headers: { 
+            Authorization: `Bearer ${localStorage.getItem("adminToken")}`,
+            "Content-Type": "multipart/form-data"
+          }
         });
       }
 
       await fetchDomaines();
-      
-      // Réinitialiser le formulaire
-      setFormData({
-        id_domaine: null,
-        nom_domaine: "",
-        description_domaine: "",
-        image_domaine: null,
-        imagePreview: null
-      });
+      resetForm();
       setShowForm(false);
+      setDeleteError(null);
     } catch (err) {
       console.error("Erreur sauvegarde:", err);
       alert(err.response?.data?.message || "Erreur lors de la sauvegarde");
     }
   };
 
-  // ✏️ Éditer un domaine
+  // ✏️ Éditer un domaine + scroll to form
   const editDomain = (domain) => {
     setFormData({
       id_domaine: domain.id_domaine,
       nom_domaine: domain.nom_domaine,
       description_domaine: domain.description_domaine || "",
-      image_domaine: null,
-      imagePreview: domain.image_domaine 
-        ? `http://localhost:5000/uploads/domaines/${domain.image_domaine}`
-        : null
+      image_domaine: domain.image_domaine || ""
     });
+    setSelectedImage(null);
+    setImagePreview(domain.image_domaine ? getImageUrl(domain.image_domaine) : null);
     setShowForm(true);
+    setDeleteError(null);
+
+    // ✅ Scroll to form after state update
+    setTimeout(() => {
+      formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 100);
   };
 
-  // 🗑️ Supprimer un domaine
-  const deleteDomain = async (id) => {
-    if (window.confirm("Êtes-vous sûr de vouloir supprimer ce domaine ?")) {
-      try {
-        await api.delete(`/${id}`);
-        await fetchDomaines();
-      } catch (err) {
-        console.error("Erreur suppression:", err);
-        alert("Erreur lors de la suppression");
-      }
+  // ─── Open delete confirmation modal ───
+  const openDeleteModal = async (domaine) => {
+    setDeleteModal({ open: true, domaine, categoryCount: 0, productCount: 0, loading: true });
+
+    try {
+      const response = await axios.get(
+        `${API_BASE_URL}/admin/domaine/${domaine.id_domaine}/stats`,
+        { headers: { Authorization: `Bearer ${localStorage.getItem("adminToken")}` } }
+      );
+      setDeleteModal(prev => ({
+        ...prev,
+        categoryCount: response.data?.categoryCount || 0,
+        productCount: response.data?.productCount || 0,
+        loading: false
+      }));
+    } catch (err) {
+      setDeleteModal(prev => ({
+        ...prev,
+        categoryCount: 0,
+        productCount: 0,
+        loading: false
+      }));
     }
   };
 
-  // 🖼️ Gérer la sélection d'image
+  // ─── Confirm and execute delete ───
+  const confirmDelete = async () => {
+    const { domaine } = deleteModal;
+    if (!domaine) return;
+
+    try {
+      await api.delete(`/${domaine.id_domaine}`);
+      await fetchDomaines();
+      setDeleteError(null);
+    } catch (err) {
+      console.error("Erreur suppression:", err);
+      setDeleteError(err.response?.data?.message || "Erreur lors de la suppression");
+      setTimeout(() => setDeleteError(null), 5000);
+    } finally {
+      setDeleteModal({ open: false, domaine: null, categoryCount: 0, productCount: 0, loading: false });
+    }
+  };
+
+  const closeDeleteModal = () => {
+    setDeleteModal({ open: false, domaine: null, categoryCount: 0, productCount: 0, loading: false });
+  };
+
+  // 🖼️ Handle image selection
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      // Nettoyer l'ancienne preview si elle existe
-      if (formData.imagePreview) {
-        URL.revokeObjectURL(formData.imagePreview);
-      }
-      
-      setFormData({
-        ...formData,
-        image_domaine: file,
-        imagePreview: URL.createObjectURL(file)
-      });
+      setSelectedImage(file);
+      setImagePreview(URL.createObjectURL(file));
     }
   };
 
-  // Nettoyage des URLs ObjectURL au démontage
-  useEffect(() => {
-    return () => {
-      if (formData.imagePreview) {
-        URL.revokeObjectURL(formData.imagePreview);
-      }
-    };
-  }, [formData.imagePreview]);
+  // Remove selected new image (revert to existing)
+  const handleRemoveNewImage = () => {
+    setSelectedImage(null);
+    if (formData.image_domaine) {
+      setImagePreview(getImageUrl(formData.image_domaine));
+    } else {
+      setImagePreview(null);
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      id_domaine: null,
+      nom_domaine: "",
+      description_domaine: "",
+      image_domaine: ""
+    });
+    setSelectedImage(null);
+    setImagePreview(null);
+  };
 
   if (loading) {
     return (
@@ -219,21 +265,19 @@ function DomainesPage() {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
 
-          <button className="add-btn" onClick={handleRefresh}>
+          <button className="refresh-btn" onClick={handleRefresh}>
             🔄 Actualiser
           </button>
 
           <button
             className="add-btn"
             onClick={() => {
-              setFormData({
-                id_domaine: null,
-                nom_domaine: "",
-                description_domaine: "",
-                image_domaine: null,
-                imagePreview: null
-              });
+              resetForm();
               setShowForm(true);
+              setDeleteError(null);
+              setTimeout(() => {
+                formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }, 100);
             }}
           >
             + Ajouter un domaine
@@ -242,173 +286,256 @@ function DomainesPage() {
       </div>
 
       {error && (
-        <div style={{
-          background: "#ffebee",
-          color: "#c62828",
-          padding: "15px",
-          borderRadius: "8px",
-          marginBottom: "20px",
-          border: "1px solid #ffcdd2"
-        }}>
+        <div className="error-banner">
           <strong>❌ Erreur</strong>
-          <p style={{ marginTop: "5px", marginBottom: "0" }}>{error}</p>
-          <button 
-            onClick={fetchDomaines}
-            style={{
-              marginTop: "10px",
-              background: "#c62828",
-              color: "white",
-              border: "none",
-              padding: "5px 10px",
-              borderRadius: "5px",
-              cursor: "pointer"
-            }}
-          >
-            Réessayer
-          </button>
+          <p>{error}</p>
+          <button onClick={fetchDomaines}>Réessayer</button>
+        </div>
+      )}
+
+      {deleteError && (
+        <div className="error-banner delete-error">
+          <strong>⚠️ Suppression impossible</strong>
+          <p>{deleteError}</p>
         </div>
       )}
 
       {/* Indicateur de recherche */}
       {searchTerm && (
-        <div style={{
-          background: "#e3f2fd",
-          padding: "10px 15px",
-          borderRadius: "8px",
-          marginBottom: "20px",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          flexWrap: "wrap",
-          gap: "10px"
-        }}>
+        <div className="filters-info">
           <span>
             🔍 Résultats : <strong>"{searchTerm}"</strong> ({filteredDomains.length} domaine(s))
           </span>
-          <button
-            onClick={handleClearSearch}
-            style={{
-              background: "#1976d2",
-              border: "none",
-              color: "white",
-              padding: "5px 12px",
-              borderRadius: "5px",
-              cursor: "pointer"
-            }}
-          >
-            ✕ Effacer
-          </button>
+          <button onClick={handleClearSearch}>✕ Effacer</button>
         </div>
       )}
 
       {/* Formulaire d'ajout/modification */}
       {showForm && (
-        <div className="domain-card">
-          <div style={{ display: "flex", flexDirection: "column", gap: "15px", width: "100%" }}>
+        <div className="domain-form-card" ref={formRef}>
+          <h3>{formData.id_domaine ? "✏️ Modifier le domaine" : "➕ Nouveau domaine"}</h3>
+
+          {/* 🖼️ Image Upload */}
+          <div className="form-group image-upload-group">
+            <label>Image du domaine</label>
+            <div className="image-preview-container">
+              {imagePreview ? (
+                <img 
+                  src={imagePreview} 
+                  alt="Aperçu" 
+                  className="image-preview"
+                  onError={(e) => { e.target.src = "https://via.placeholder.com/200x150?text=Image+non+disponible"; }}
+                />
+              ) : (
+                <div className="image-placeholder">
+                  <span>📷 Aucune image</span>
+                </div>
+              )}
+            </div>
+
+            <div className="image-input-actions">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                className="image-input"
+                id="domain-image-input"
+              />
+
+              {(selectedImage || (formData.id_domaine && formData.image_domaine && imagePreview)) && (
+                <button 
+                  type="button"
+                  className="remove-image-btn"
+                  onClick={handleRemoveNewImage}
+                >
+                  🗑️ {selectedImage ? "Annuler la nouvelle image" : "Supprimer l'image"}
+                </button>
+              )}
+            </div>
+
+            {selectedImage && (
+              <p className="file-name">📎 {selectedImage.name}</p>
+            )}
+            {formData.id_domaine && formData.image_domaine && !selectedImage && (
+              <p className="file-name existing">💾 Image actuelle conservée</p>
+            )}
+          </div>
+
+          <div className="form-group">
+            <label>Nom du domaine *</label>
             <input
               type="text"
-              placeholder="Nom du domaine *"
+              placeholder="Ex: Électronique, Mode, Maison..."
               value={formData.nom_domaine}
               onChange={(e) => setFormData({ ...formData, nom_domaine: e.target.value })}
             />
+          </div>
 
+          <div className="form-group">
+            <label>Description (optionnelle)</label>
             <textarea
-              placeholder="Description du domaine"
+              placeholder="Description du domaine..."
               value={formData.description_domaine}
               onChange={(e) => setFormData({ ...formData, description_domaine: e.target.value })}
-              rows="4"
+              rows="3"
             />
+          </div>
 
-            {formData.imagePreview && (
-              <div style={{ marginTop: "10px" }}>
-                <img 
-                  src={formData.imagePreview} 
-                  alt="Aperçu" 
-                  style={{ width: "100px", height: "100px", objectFit: "cover", borderRadius: "8px" }}
-                />
-              </div>
-            )}
-
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleImageChange}
-            />
-
-            <div style={{ display: "flex", gap: "10px" }}>
-              <button className="add-btn" onClick={saveDomain}>
-                {formData.id_domaine ? "Mettre à jour" : "Ajouter"}
-              </button>
-              <button 
-                className="delete-btn" 
-                onClick={() => setShowForm(false)}
-                style={{ background: "#ccc", borderColor: "#ccc", color: "#333" }}
-              >
-                Annuler
-              </button>
-            </div>
+          <div className="form-actions">
+            <button className="save-btn" onClick={saveDomain}>
+              {formData.id_domaine ? "Mettre à jour" : "Ajouter"}
+            </button>
+            <button 
+              className="cancel-btn" 
+              onClick={() => {
+                setShowForm(false);
+                resetForm();
+              }}
+            >
+              Annuler
+            </button>
           </div>
         </div>
       )}
 
       {/* Liste des domaines */}
       {filteredDomains.length === 0 && !showForm ? (
-        <div style={{
-          textAlign: "center",
-          padding: "60px",
-          color: "#666",
-          background: "white",
-          borderRadius: "15px"
-        }}>
+        <div className="empty-state">
           {searchTerm ? (
             <>
               <p>❌ Aucun domaine trouvé pour <strong>"{searchTerm}"</strong></p>
-              <button className="add-btn" onClick={handleRefresh} style={{ marginTop: "15px" }}>
+              <button className="add-btn" onClick={handleClearSearch}>
                 Afficher tous les domaines
               </button>
             </>
           ) : (
             <>
               <p>📂 Aucun domaine pour le moment.</p>
-              <button className="add-btn" onClick={() => setShowForm(true)} style={{ marginTop: "15px" }}>
+              <button className="add-btn" onClick={() => {
+                resetForm();
+                setShowForm(true);
+                setTimeout(() => {
+                  formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                }, 100);
+              }}>
                 + Ajouter votre premier domaine
               </button>
             </>
           )}
         </div>
       ) : (
-        // ✅ Clés uniques avec préfixe pour éviter les conflits
-        filteredDomains.map((domain) => (
-          <div className="domain-card" key={`domaine-${domain.id_domaine}`}>
-            <div className="domain-image">
-              <img
-                src={
-                  domain.image_domaine 
-                    ? `http://localhost:5000/uploads/domaines/${domain.image_domaine}`
-                    : "https://via.placeholder.com/250?text=Pas+d'image"
-                }
-                alt={domain.nom_domaine}
-                onError={(e) => {
-                  e.target.src = "https://via.placeholder.com/250?text=Image+non+trouvée";
-                }}
-              />
-            </div>
+        <div className="domains-grid">
+          {filteredDomains.map((domain) => (
+            <div className="domain-card" key={`domaine-${domain.id_domaine}`}>
+              <div className="domain-image">
+                <img
+                  src={domain.image_domaine ? getImageUrl(domain.image_domaine) : "https://via.placeholder.com/300x180?text=Pas+d'image"}
+                  alt={domain.nom_domaine}
+                  onError={(e) => { e.target.src = "https://via.placeholder.com/300x180?text=Image+non+trouvée"; }}
+                />
+              </div>
 
-            <div className="domain-info">
-              <h2>{domain.nom_domaine}</h2>
-              <p>{domain.description_domaine || "Aucune description"}</p>
+              <div className="domain-header">
+                <h3>{domain.nom_domaine}</h3>
+              </div>
 
-              <div className="actions">
+              <p className="domain-description">
+                {domain.description_domaine || "Aucune description"}
+              </p>
+
+              <div className="domain-meta">
+                <span className="meta-label">ID: {domain.id_domaine}</span>
+              </div>
+
+              <div className="domain-actions">
                 <button className="edit-btn" onClick={() => editDomain(domain)}>
                   ✏️ Modifier
                 </button>
-                <button className="delete-btn" onClick={() => deleteDomain(domain.id_domaine)}>
+                <button 
+                  className="delete-btn" 
+                  onClick={() => openDeleteModal(domain)}
+                >
                   🗑️ Supprimer
                 </button>
               </div>
             </div>
+          ))}
+        </div>
+      )}
+
+      {/* ─── DELETE CONFIRMATION MODAL ─── */}
+      {deleteModal.open && (
+        <div className="modal-overlay" onClick={closeDeleteModal}>
+          <div className="modal-content delete-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>⚠️ Confirmer la suppression</h3>
+              <button className="modal-close" onClick={closeDeleteModal}>×</button>
+            </div>
+
+            <div className="modal-body">
+              {deleteModal.loading ? (
+                <p>⏳ Chargement des informations...</p>
+              ) : (
+                <>
+                  <p>
+                    Vous êtes sur le point de supprimer le domaine :
+                    <br />
+                    <strong>"{deleteModal.domaine?.nom_domaine}"</strong>
+                  </p>
+
+                  <div className={`warning-box ${(deleteModal.categoryCount > 0 || deleteModal.productCount > 0) ? 'danger' : 'info'}`}>
+                    <span className="warning-icon">
+                      {(deleteModal.categoryCount > 0 || deleteModal.productCount > 0) ? '🔴' : '🟢'}
+                    </span>
+                    <div>
+                      <strong>
+                        {deleteModal.categoryCount > 0 
+                          ? `Ce domaine contient ${deleteModal.categoryCount} catégorie(s)` 
+                          : "Ce domaine ne contient aucune catégorie"}
+                      </strong>
+
+                      {deleteModal.categoryCount > 0 && deleteModal.productCount > 0 && (
+                        <p className="warning-detail">
+                          Dont <strong>{deleteModal.productCount} produit(s)</strong> au total
+                        </p>
+                      )}
+
+                      {(deleteModal.categoryCount > 0 || deleteModal.productCount > 0) && (
+                        <p className="warning-detail">
+                          ⚠️ <strong>Attention :</strong> La suppression de ce domaine 
+                          entraînera la suppression définitive de <strong>{deleteModal.categoryCount} catégorie(s)</strong> 
+                          {deleteModal.productCount > 0 && (
+                            <> et <strong>{deleteModal.productCount} produit(s)</strong></>
+                          )} associé(s).
+                          Cette action est <strong>irréversible</strong>.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="modal-actions">
+              <button 
+                className="cancel-btn" 
+                onClick={closeDeleteModal}
+                disabled={deleteModal.loading}
+              >
+                Annuler
+              </button>
+              <button 
+                className={`confirm-delete-btn ${(deleteModal.categoryCount > 0 || deleteModal.productCount > 0) ? 'danger' : ''}`}
+                onClick={confirmDelete}
+                disabled={deleteModal.loading}
+              >
+                {(deleteModal.categoryCount > 0 || deleteModal.productCount > 0)
+                  ? `🗑️ Supprimer (${deleteModal.categoryCount} cat. / ${deleteModal.productCount} prod.)` 
+                  : "🗑️ Supprimer"}
+              </button>
+            </div>
           </div>
-        ))
+        </div>
       )}
     </div>
   );

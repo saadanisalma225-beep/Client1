@@ -1,8 +1,10 @@
 const express = require('express');
-const cors = require('cors');  // ← CORRIGÉ (était 'express')
+const cors = require('cors');  
 const path = require('path');
 const authRoutes = require('./routes/authRoutes');
 const domaineRoutes = require('./routes/domaineRoutes');
+const categorieRoutes = require('./routes/categorieRoutes'); 
+const produitRoutes = require('./routes/produitRoutes');
 const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
@@ -15,7 +17,10 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/admin/domaine', domaineRoutes);   // Notez: domaine (singulier)
+app.use('/api/admin/domaine', domaineRoutes);   
+app.use('/api/admin/categorie', categorieRoutes);
+app.use('/api/admin/produit', produitRoutes);
+
 
 // Route test
 app.get('/api/health', (req, res) => {
