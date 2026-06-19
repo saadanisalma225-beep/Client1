@@ -9,138 +9,126 @@
 
 .admin-form {
   background-color: white;
-  padding: 40px;
-  border-radius: 10px;
-  width: 350px;
+  padding: 40px 45px;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 400px;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
 }
 
 .admin-form h2 {
   text-align: center;
   margin-bottom: 30px;
   color: #333;
-  font-size: 24px;
+  font-size: 26px;
+  font-weight: 600;
 }
 
-.admin-input {
+/* Message d'erreur */
+.error-message {
+  background: #ffebee;
+  color: #c62828;
+  padding: 12px 16px;
+  border-radius: 8px;
   margin-bottom: 20px;
-  padding: 12px;
-  font-size: 16px;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  transition: border-color 0.3s;
+  font-size: 14px;
+  text-align: center;
+  border-left: 4px solid #c62828;
+}
+
+/* Champs de saisie */
+.admin-input {
+  margin-bottom: 18px;
+  padding: 14px 16px;
+  font-size: 15px;
+  border: 2px solid #e8e8e8;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  background: #fafafa;
 }
 
 .admin-input:focus {
   outline: none;
   border-color: #667eea;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
+.admin-input::placeholder {
+  color: #aaa;
+}
+
+/* Bouton de connexion */
 .admin-button {
-  padding: 12px;
+  padding: 14px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   border: none;
-  border-radius: 5px;
+  border-radius: 8px;
   cursor: pointer;
   font-size: 16px;
-  font-weight: bold;
-  transition: transform 0.2s;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  margin-top: 5px;
 }
 
 .admin-button:hover {
   transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.35);
 }
 
-/* Dashboard styles */
-.admin-dashboard {
-  min-height: 100vh;
-  background-color: #f5f5f5;
+.admin-button:active {
+  transform: translateY(0);
 }
 
-.dashboard-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  padding: 20px 30px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-}
-
-.dashboard-header h2 {
-  margin: 0;
-  font-size: 24px;
-}
-
-.logout-btn {
-  padding: 10px 20px;
-  background-color: rgba(255, 255, 255, 0.2);
-  color: white;
-  border: 1px solid white;
-  border-radius: 5px;
-  cursor: pointer;
+/* Lien d'inscription */
+.register-link {
+  text-align: center;
+  margin-top: 22px;
   font-size: 14px;
-  transition: all 0.3s;
-}
-
-.logout-btn:hover {
-  background-color: white;
-  color: #667eea;
-}
-
-.dashboard-content {
-  padding: 30px;
-}
-
-.welcome-card {
-  background-color: white;
-  padding: 20px;
-  border-radius: 10px;
-  margin-bottom: 30px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-}
-
-.welcome-card h3 {
-  margin: 0 0 10px 0;
-  color: #333;
-}
-
-.welcome-card p {
-  margin: 0;
   color: #666;
 }
 
-.stats-container {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 20px;
+.register-link span {
+  color: #666;
 }
 
-.stat-card {
-  background-color: white;
-  padding: 25px;
-  border-radius: 10px;
-  text-align: center;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s;
-}
-
-.stat-card:hover {
-  transform: translateY(-5px);
-}
-
-.stat-card h4 {
-  margin: 0 0 10px 0;
+.register-link button {
+  background: none;
+  border: none;
   color: #667eea;
-  font-size: 18px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 0;
+  transition: color 0.3s ease;
 }
 
-.stat-card p {
-  margin: 0;
-  font-size: 32px;
-  font-weight: bold;
-  color: #333;
+.register-link button:hover {
+  color: #764ba2;
+  text-decoration: underline;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .admin-form {
+    padding: 30px 25px;
+    margin: 15px;
+  }
+
+  .admin-form h2 {
+    font-size: 22px;
+  }
+
+  .admin-input {
+    padding: 12px 14px;
+    font-size: 14px;
+  }
+
+  .admin-button {
+    padding: 12px;
+    font-size: 15px;
+  }
 }

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import './admin.css'; 
 
-const AdminLogin = ({ onLogin }) => {
+const AdminLogin = ({ onLogin, onRegisterClick }) => {
   const [credentials, setCredentials] = useState({
     email_admin: '',
     password_admin: ''
@@ -32,7 +32,6 @@ const AdminLogin = ({ onLogin }) => {
       
       if (response.ok) {
         localStorage.setItem('adminToken', data.token);
-        // if (onLogin) onLogin(data);
         onLogin();
       } else {
         setError(data.message || 'Échec de connexion');
@@ -49,8 +48,7 @@ const AdminLogin = ({ onLogin }) => {
         
         {error && <div className="error-message">{error}</div>}
         
-      
-         <input
+        <input
           type="email"
           name="email_admin"           
           className="admin-input"
@@ -73,6 +71,29 @@ const AdminLogin = ({ onLogin }) => {
         <button type="submit" className="admin-button">
           Se connecter
         </button>
+
+        {/* ✅ Lien vers la page d'inscription */}
+        <div style={{ textAlign: 'center', marginTop: '20px' }}>
+          <span style={{ color: '#666', fontSize: '14px' }}>
+            Pas encore de compte ?{' '}
+          </span>
+          <button
+            type="button"
+            onClick={onRegisterClick}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#667eea',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: 'bold',
+              textDecoration: 'underline',
+              padding: '0'
+            }}
+          >
+            S'inscrire
+          </button>
+        </div>
       </form>
     </div>
   );
