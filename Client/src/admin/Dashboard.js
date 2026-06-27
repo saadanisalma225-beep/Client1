@@ -1,10 +1,11 @@
-// Dashboard.js - Version complète et corrigée
+// Dashboard.js - Version sans ClientsPage
 import React, { useState } from "react";
 import "./dashboard.css";
 import DomainesPage from "./DomainesPage";
 import HomeDashboard from "./HomeDashboard";
 import CategoriesPage from "./CategoriesPage";
 import ProductsPage from "./ProductsPage";
+// ❌ SUPPRIMEZ cette ligne : import ClientsPage from "./ClientsPage";
 
 function Dashboard({ onLogout }) {
   const [menu, setMenu] = useState("dashboard");
@@ -60,6 +61,7 @@ function Dashboard({ onLogout }) {
           {menu === "domaines" && <DomainesPage />}
           {menu === "categories" && <CategoriesPage />}
           {menu === "products" && <ProductsPage />}
+          {/* ❌ SUPPRIMEZ cette ligne : {menu === "clients" && <ClientsPage />} */}
         </main>
       </div>
     </div>
