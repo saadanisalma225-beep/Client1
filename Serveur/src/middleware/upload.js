@@ -37,5 +37,6 @@ const createUpload = (folderName, prefix) => {
 module.exports = {
   domaine: createUpload('domaines', 'domaine'),
   categorie: createUpload('categories', 'categorie'),
-  produit: createUpload('produits', 'produit')
+  produit: createUpload('produits', 'produit'),
+  clientProfil: createUpload('profils', 'profil') 
 };
