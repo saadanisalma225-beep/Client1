@@ -10,49 +10,10 @@ const AuthPage = ({ onNavigate, onLogin }) => {
     nom: '',
     prenom: '',
     telephone: '',
-    pays: '',
     ville: ''
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-
-  // Liste des pays
-  const paysList = [
-    'Maroc',
-    'Algérie',
-    'Tunisie',
-    'France',
-    'Espagne',
-    'Italie',
-    'Allemagne',
-    'Royaume-Uni',
-    'Belgique',
-    'Suisse',
-    'Canada',
-    'Sénégal',
-    "Côte d'Ivoire",
-    'Mali',
-    'Niger'
-  ];
-
-  // Liste des villes par pays
-  const villesList = {
-    'Maroc': ['Casablanca', 'Rabat', 'Marrakech', 'Fès', 'Tanger', 'Agadir', 'Meknès', 'Oujda', 'Kenitra', 'Tétouan'],
-    'Algérie': ['Alger', 'Oran', 'Constantine', 'Annaba', 'Blida', 'Sétif'],
-    'Tunisie': ['Tunis', 'Sfax', 'Sousse', 'Kairouan', 'Bizerte'],
-    'France': ['Paris', 'Lyon', 'Marseille', 'Toulouse', 'Nice', 'Nantes', 'Strasbourg'],
-    'Espagne': ['Madrid', 'Barcelone', 'Valence', 'Séville', 'Bilbao'],
-    'Italie': ['Rome', 'Milan', 'Naples', 'Turin', 'Florence'],
-    'Allemagne': ['Berlin', 'Munich', 'Hambourg', 'Cologne', 'Francfort'],
-    'Royaume-Uni': ['Londres', 'Manchester', 'Birmingham', 'Liverpool'],
-    'Belgique': ['Bruxelles', 'Anvers', 'Liège', 'Gand'],
-    'Suisse': ['Genève', 'Zurich', 'Berne', 'Lausanne'],
-    'Canada': ['Montréal', 'Toronto', 'Vancouver', 'Québec'],
-    'Sénégal': ['Dakar', 'Thiès', 'Saint-Louis', 'Ziguinchor'],
-    "Côte d'Ivoire": ['Abidjan', 'Bouaké', 'Yamoussoukro', 'Daloa'],
-    'Mali': ['Bamako', 'Ségou', 'Mopti', 'Koutiala'],
-    'Niger': ['Niamey', 'Zinder', 'Maradi', 'Tahoua']
-  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -60,19 +21,9 @@ const AuthPage = ({ onNavigate, onLogin }) => {
       ...prev,
       [name]: value
     }));
-    // Réinitialiser l'erreur quand l'utilisateur tape
     if (error) setError('');
-    
-    if (name === 'pays') {
-      setFormData(prev => ({
-        ...prev,
-        pays: value,
-        ville: ''
-      }));
-    }
   };
 
-  // Validation des champs
   const validateForm = () => {
     if (isLogin) {
       if (!formData.email || !formData.password) {
@@ -85,9 +36,8 @@ const AuthPage = ({ onNavigate, onLogin }) => {
       }
       return true;
     } else {
-      // Inscription
       if (!formData.nom || !formData.prenom || !formData.email || 
-          !formData.password || !formData.pays || !formData.ville) {
+          !formData.password || !formData.ville) {
         setError('Veuillez remplir tous les champs obligatoires (*)');
         return false;
       }
@@ -112,7 +62,6 @@ const AuthPage = ({ onNavigate, onLogin }) => {
     setError('');
     setLoading(true);
 
-    // Validation côté client
     if (!validateForm()) {
       setLoading(false);
       return;
@@ -121,12 +70,12 @@ const AuthPage = ({ onNavigate, onLogin }) => {
     if (isLogin) {
       // ─── CONNEXION ───
       try {
-        const response = await fetch('http://localhost:5000/api/auth/login', {
+        const response = await fetch('http://localhost:5000/api/auth/client/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             email: formData.email,
-            password: formData.password
+            mot_de_passe: formData.password
           })
         });
 
@@ -134,7 +83,7 @@ const AuthPage = ({ onNavigate, onLogin }) => {
 
         if (response.ok) {
           localStorage.setItem('token', data.token);
-          localStorage.setItem('user', JSON.stringify(data.user));
+          localStorage.setItem('user', JSON.stringify(data.client));
           onLogin?.();
           onNavigate?.('home');
         } else {
@@ -142,28 +91,24 @@ const AuthPage = ({ onNavigate, onLogin }) => {
         }
       } catch (err) {
         console.error('Erreur de connexion:', err);
-        if (err.message === 'Failed to fetch' || err.code === 'ERR_NETWORK') {
-          setError('❌ Erreur de connexion au serveur. Vérifiez que le serveur backend est démarré sur http://localhost:5000');
-        } else {
-          setError('❌ Erreur de connexion au serveur');
-        }
+        setError('❌ Erreur de connexion au serveur');
       } finally {
         setLoading(false);
       }
     } else {
       // ─── INSCRIPTION ───
       try {
-        const response = await fetch('http://localhost:5000/api/auth/register/client', {
+        const response = await fetch('http://localhost:5000/api/auth/client/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             nom: formData.nom,
             prenom: formData.prenom,
             email: formData.email,
+            mot_de_passe: formData.password,
+            confirm_mot_de_passe: formData.password,
             telephone: formData.telephone || '',
-            pays: formData.pays,
             ville: formData.ville,
-            password: formData.password,
             role: 'client'
           })
         });
@@ -171,23 +116,17 @@ const AuthPage = ({ onNavigate, onLogin }) => {
         const data = await response.json();
 
         if (response.ok) {
-          // Inscription réussie - Rediriger vers la finalisation
           if (data.token) {
             localStorage.setItem('token', data.token);
-            localStorage.setItem('user', JSON.stringify(data.user));
+            localStorage.setItem('user', JSON.stringify(data.client));
           }
-          // Passer les données utilisateur à la page de finalisation
-          onNavigate?.('account-finalization', data.user || formData);
+          onNavigate?.('account-finalization', data.client || formData);
         } else {
           setError(data.message || 'Erreur lors de l\'inscription');
         }
       } catch (err) {
         console.error('Erreur inscription:', err);
-        if (err.message === 'Failed to fetch' || err.code === 'ERR_NETWORK') {
-          setError('❌ Erreur de connexion au serveur. Vérifiez que le serveur backend est démarré sur http://localhost:5000');
-        } else {
-          setError('❌ Erreur de connexion au serveur');
-        }
+        setError('❌ Erreur de connexion au serveur');
       } finally {
         setLoading(false);
       }
@@ -249,44 +188,16 @@ const AuthPage = ({ onNavigate, onLogin }) => {
                   />
                 </div>
 
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Pays</label>
-                    <select
-                      name="pays"
-                      value={formData.pays}
-                      onChange={handleChange}
-                      required
-                      className="form-select"
-                    >
-                      <option value="">Sélectionnez votre pays</option>
-                      {paysList.map((pays) => (
-                        <option key={pays} value={pays}>
-                          {pays}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>Ville</label>
-                    <select
-                      name="ville"
-                      value={formData.ville}
-                      onChange={handleChange}
-                      required
-                      className="form-select"
-                      disabled={!formData.pays}
-                    >
-                      <option value="">
-                        {formData.pays ? 'Sélectionnez votre ville' : 'Choisissez un pays d\'abord'}
-                      </option>
-                      {formData.pays && villesList[formData.pays]?.map((ville) => (
-                        <option key={ville} value={ville}>
-                          {ville}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                <div className="form-group">
+                  <label>Ville</label>
+                  <input
+                    type="text"
+                    name="ville"
+                    placeholder="Votre ville"
+                    value={formData.ville}
+                    onChange={handleChange}
+                    required
+                  />
                 </div>
               </>
             )}
@@ -347,7 +258,6 @@ const AuthPage = ({ onNavigate, onLogin }) => {
                     nom: '',
                     prenom: '',
                     telephone: '',
-                    pays: '',
                     ville: ''
                   });
                 }}

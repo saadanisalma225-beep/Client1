@@ -66,7 +66,7 @@ const AccountFinalization = ({ userData, onNavigate }) => {
         formDataToSend.append('photo', formData.photo);
       }
 
-      const response = await fetch('http://localhost:5000/api/auth/finalize', {
+      const response = await fetch('http://localhost:5000/api/auth/client/finalize', {
         method: 'POST',
         body: formDataToSend
       });
