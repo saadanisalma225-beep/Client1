@@ -1,6 +1,6 @@
 // Dashboard.js - Version sans ClientsPage
 import React, { useState } from "react";
-import "./dashboard.css";
+import "../assets/css/admin/dashboard.css";
 import DomainesPage from "./DomainesPage";
 import HomeDashboard from "./HomeDashboard";
 import CategoriesPage from "./CategoriesPage";

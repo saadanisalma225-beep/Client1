@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import "./ProductsPage.css";
+import "../assets/css/admin/ProductsPage.css";
 
 const API_BASE_URL = "http://localhost:5000/api";
 

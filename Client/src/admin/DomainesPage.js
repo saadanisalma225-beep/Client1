@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
-import "./DomainesPage.css";
+import "../assets/css/admin/DomainesPage.css";
 
 const API_BASE_URL = "http://localhost:5000/api";
 const API_URL = `${API_BASE_URL}/admin/domaine`;
