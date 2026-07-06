@@ -17,7 +17,11 @@ import {
   Edit,
   Trash2,
   PlayCircle,
-  PauseCircle
+  PauseCircle,
+  PlusCircle,
+  Heart,
+  Award,
+  ShoppingBag
 } from 'lucide-react';
 import { decryptData } from '../utils/crypto';
 import './Publies.css';
@@ -32,8 +36,7 @@ const Publies = ({ onNavigate }) => {
     vendus: 0,
     encheres: 0
   });
-  const [filter, setFilter] = useState('all'); // all, en_attente, enchere, vendu
-  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [filter, setFilter] = useState('publies');
 
   useEffect(() => {
     const encryptedUser = localStorage.getItem('user');
@@ -66,7 +69,7 @@ const Publies = ({ onNavigate }) => {
           prix: 1311,
           prix_depart: 5000,
           prix_actuel: 10000,
-          statut: 'enchere', // enchere, en_attente, vendu
+          statut: 'enchere',
           date_validation: '2025-12-17',
           date_creation: '2025-12-01',
           image: 'https://images.unsplash.com/photo-1600164318544-79e50b5b488c?w=400',
@@ -142,8 +145,13 @@ const Publies = ({ onNavigate }) => {
   };
 
   const getFilteredProducts = () => {
-    if (filter === 'all') return products;
-    return products.filter(p => p.statut === filter);
+    if (filter === 'publies') return products.filter(p => p.statut === 'enchere' || p.statut === 'vendu');
+    if (filter === 'en_attente') return products.filter(p => p.statut === 'en_attente');
+    if (filter === 'vendus') return products.filter(p => p.statut === 'vendu');
+    if (filter === 'enchere') return products.filter(p => p.statut === 'enchere');
+    if (filter === 'favoris') return products.filter(p => p.favoris);
+    if (filter === 'gagnes') return products.filter(p => p.gagne);
+    return products;
   };
 
   const formatPrice = (price) => {
@@ -171,6 +179,10 @@ const Publies = ({ onNavigate }) => {
       'vendu': { label: 'Vendu', className: 'status-vendu', icon: <CheckCircle size={14} /> }
     };
     return badges[statut] || badges['en_attente'];
+  };
+
+  const handleAddProduct = () => {
+    onNavigate?.('sell');
   };
 
   const renderProductCard = (product) => {
@@ -292,7 +304,7 @@ const Publies = ({ onNavigate }) => {
           <div className="vendeur-info">
             <h1>{client?.prenom} {client?.nom}</h1>
             <p className="membre-since">
-              Membre depuis {client?.created_at ? formatDate(client.created_at) : 'Décembre 2025'}
+              Membre depuis {client?.created_at ? formatDate(client.created_at) : 'Juillet 2026'}
             </p>
             
             <div className="vendeur-stats">
@@ -316,39 +328,50 @@ const Publies = ({ onNavigate }) => {
         </div>
       </section>
 
-      {/* Filtres */}
-      <section className="filters-section">
-        <div className="filters-container">
+      {/* Navigation Tabs */}
+      <section className="tabs-section">
+        <div className="tabs-container">
           <button 
-            className={`filter-btn ${filter === 'all' ? 'active' : ''}`}
-            onClick={() => setFilter('all')}
-          >
-            Tous
-            <span className="filter-count">{products.length}</span>
-          </button>
-          <button 
-            className={`filter-btn ${filter === 'enchere' ? 'active' : ''}`}
+            className={`tab-btn ${filter === 'enchere' ? 'active' : ''}`}
             onClick={() => setFilter('enchere')}
           >
             <Gavel size={16} />
-            En enchères
-            <span className="filter-count">{stats.encheres}</span>
+            Mes Enchères
           </button>
           <button 
-            className={`filter-btn ${filter === 'en_attente' ? 'active' : ''}`}
+            className={`tab-btn ${filter === 'favoris' ? 'active' : ''}`}
+            onClick={() => setFilter('favoris')}
+          >
+            <Heart size={16} />
+            Favoris
+          </button>
+          <button 
+            className={`tab-btn ${filter === 'publies' ? 'active' : ''}`}
+            onClick={() => setFilter('publies')}
+          >
+            <FileText size={16} />
+            Publies
+          </button>
+          <button 
+            className={`tab-btn ${filter === 'vendus' ? 'active' : ''}`}
+            onClick={() => setFilter('vendus')}
+          >
+            <ShoppingBag size={16} />
+            Vendus
+          </button>
+          <button 
+            className={`tab-btn ${filter === 'en_attente' ? 'active' : ''}`}
             onClick={() => setFilter('en_attente')}
           >
             <Clock size={16} />
             En attente
-            <span className="filter-count">{stats.en_attente}</span>
           </button>
           <button 
-            className={`filter-btn ${filter === 'vendu' ? 'active' : ''}`}
-            onClick={() => setFilter('vendu')}
+            className={`tab-btn ${filter === 'gagnes' ? 'active' : ''}`}
+            onClick={() => setFilter('gagnes')}
           >
-            <CheckCircle size={16} />
-            Vendus
-            <span className="filter-count">{stats.vendus}</span>
+            <Award size={16} />
+            Gagnés
           </button>
         </div>
       </section>
@@ -366,11 +389,14 @@ const Publies = ({ onNavigate }) => {
           </div>
         ) : (
           <div className="empty-state">
-            <FileText size={48} className="empty-icon" />
-            <h3>Aucun produit dans cette catégorie</h3>
-            <p>Les produits que vous publiez apparaîtront ici.</p>
-            <button className="btn-create-product" onClick={() => onNavigate?.('sell')}>
-              Publier un produit
+            <div className="empty-icon-wrapper">
+              <Package size={64} className="empty-icon" />
+            </div>
+            <h3>Vous n'avez pas encore publié de produits</h3>
+            <p>Commencez à vendre vos produits artisanaux en les publiant sur Bazart.</p>
+            <button className="btn-sell-product" onClick={handleAddProduct}>
+              <PlusCircle size={20} />
+              Vendre un produit
             </button>
           </div>
         )}

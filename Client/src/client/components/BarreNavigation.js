@@ -11,7 +11,7 @@ import {
   Menu,
   X,
   ChevronDown,
-  ChevronRight, // ✅ AJOUT
+  ChevronRight,
   Gavel,
   MessageCircle,
   Award,
@@ -381,14 +381,10 @@ const BarreNavigation = ({ onNavigate, isClientLoggedIn, onClientLogout }) => {
     return notificationTypes[type]?.label || 'Notification';
   };
 
+  // ===== MENU ITEMS MODIFIÉS - Suppression des éléments inutiles =====
   const menuItems = [
-    { icon: <User size={16} />, label: 'Mon profil', page: 'profile' },
-    { icon: <Gavel size={16} />, label: 'Mes enchères', page: 'encheres' },
-    { icon: <Heart size={16} />, label: 'Mes favoris', page: 'favoris' },
-    { icon: <Award size={16} />, label: 'Devenir expert', page: 'become-expert' },
-    { icon: <Wallet size={16} />, label: 'Mon portefeuille', page: 'wallet' },
-    { icon: <Settings size={16} />, label: 'Paramètres', page: 'settings' },
-    { icon: <HelpCircle size={16} />, label: 'Aide', page: 'help' }
+    { icon: <User size={16} />, label: 'Mon profil', page: 'profile' }
+    // Tous les autres éléments ont été supprimés
   ];
 
   const navLinks = [
@@ -653,6 +649,7 @@ const BarreNavigation = ({ onNavigate, isClientLoggedIn, onClientLogout }) => {
 
                     <div className="dropdown-divider"></div>
 
+                    {/* SEULEMENT "Mon profil" dans le menu */}
                     {menuItems.map((item, index) => (
                       <button
                         key={index}
@@ -669,6 +666,7 @@ const BarreNavigation = ({ onNavigate, isClientLoggedIn, onClientLogout }) => {
 
                     <div className="dropdown-divider"></div>
 
+                    {/* Déconnexion */}
                     <button className="dropdown-item logout-btn" onClick={handleLogout}>
                       <LogOut size={16} strokeWidth={2} />
                       Déconnexion

@@ -1,5 +1,6 @@
 import React from 'react';
-import {
+import './Footer.css'; import
+ {
   Hammer,
   Globe,
   Camera,

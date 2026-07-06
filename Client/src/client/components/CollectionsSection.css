@@ -1,0 +1,253 @@
+/* client/components/CollectionsSection.css */
+
+/* ========== SECTION ========== */
+.collections-section {
+  padding: 60px 40px;
+  background: #f7fafc;
+}
+
+.collections-container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* ========== HEADER ========== */
+.collections-header {
+  margin-bottom: 40px;
+  text-align: center;
+}
+
+.collections-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #ebf8ff;
+  color: #2b6cb0;
+  padding: 6px 16px;
+  border-radius: 50px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.collections-title {
+  font-size: 36px;
+  font-weight: 800;
+  color: #1a202c;
+  margin-bottom: 8px;
+  letter-spacing: -0.5px;
+}
+
+.collections-subtitle {
+  font-size: 16px;
+  color: #718096;
+  font-weight: 400;
+}
+
+/* ========== GRID ========== */
+.collections-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 24px;
+}
+
+/* ========== CARD ========== */
+.collection-card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 28px 24px 24px;
+  border: 1px solid #edf2f7;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.collection-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #3182ce, #2b6cb0);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.collection-card:hover {
+  transform: translateY(-6px);
+  border-color: #bee3f8;
+  box-shadow: 0 12px 40px rgba(49, 130, 206, 0.08);
+}
+
+.collection-card:hover::before {
+  opacity: 1;
+}
+
+/* Icône */
+.collection-icon-wrapper {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+  transition: all 0.3s ease;
+}
+
+.collection-card:hover .collection-icon-wrapper {
+  transform: scale(1.05) rotate(-3deg);
+}
+
+/* Titre */
+.collection-name {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1a202c;
+  margin-bottom: 8px;
+  letter-spacing: -0.3px;
+}
+
+/* Enchères */
+.collection-encheres {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #4a5568;
+  background: #f7fafc;
+  padding: 6px 16px;
+  border-radius: 20px;
+  transition: all 0.3s ease;
+  margin-bottom: 16px;
+  align-self: flex-start;
+}
+
+.collection-encheres svg {
+  color: #ed8936;
+}
+
+.collection-card:hover .collection-encheres {
+  background: #edf2f7;
+}
+
+/* Bouton Explorer */
+.btn-explorer {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: transparent;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  color: #4a5568;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: inherit;
+  margin-top: auto;
+  align-self: flex-start;
+}
+
+.btn-explorer svg {
+  transition: transform 0.3s ease;
+}
+
+.collection-card:hover .btn-explorer {
+  border-color: #3182ce;
+  color: #2b6cb0;
+  background: #ebf8ff;
+}
+
+.collection-card:hover .btn-explorer svg {
+  transform: translateX(4px);
+}
+
+/* ========== RESPONSIVE ========== */
+@media (max-width: 1024px) {
+  .collections-grid {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 20px;
+  }
+}
+
+@media (max-width: 768px) {
+  .collections-section {
+    padding: 40px 20px;
+  }
+
+  .collections-title {
+    font-size: 28px;
+  }
+
+  .collections-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .collection-card {
+    padding: 20px 16px 18px;
+  }
+
+  .collection-name {
+    font-size: 17px;
+  }
+
+  .btn-explorer {
+    font-size: 13px;
+    padding: 8px 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .collections-section {
+    padding: 30px 16px;
+  }
+
+  .collections-title {
+    font-size: 24px;
+  }
+
+  .collections-subtitle {
+    font-size: 14px;
+  }
+
+  .collections-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .collection-card {
+    padding: 18px 14px 16px;
+  }
+
+  .collection-name {
+    font-size: 16px;
+  }
+
+  .collection-encheres {
+    font-size: 13px;
+    padding: 4px 12px;
+  }
+
+  .btn-explorer {
+    font-size: 12px;
+    padding: 6px 14px;
+  }
+
+  .collection-icon-wrapper {
+    width: 44px;
+    height: 44px;
+  }
+
+  .collection-icon-wrapper svg {
+    width: 18px;
+    height: 18px;
+  }
+}
