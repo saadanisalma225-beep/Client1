@@ -1386,3 +1386,37 @@
 .footer-brand .logo-icon svg {
   color: white;
 }
+/* client/HomePage.css - Ajouter à la fin */
+
+/* ===== WALLET LINK ===== */
+.hero-wallet-link {
+  margin-top: 20px;
+}
+
+.btn-wallet-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 12px;
+  color: #2b6cb0;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+}
+
+.btn-wallet-link:hover {
+  background: white;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  border-color: #3182ce;
+}
+
+.btn-wallet-link svg {
+  color: #3182ce;
+}

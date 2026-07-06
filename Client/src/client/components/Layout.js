@@ -1,11 +1,12 @@
+// client/components/Layout.js
 import React from 'react';
-import Header from './Header';
+import BarreNavigation from './BarreNavigation';  // ← NOUVEAU (remplace Header)
 import Footer from './Footer';
 
 const Layout = ({ children, onNavigate, isClientLoggedIn, onClientLogout }) => {
   return (
     <div className="page-layout">
-      <Header 
+      <BarreNavigation 
         onNavigate={onNavigate} 
         isClientLoggedIn={isClientLoggedIn} 
         onClientLogout={onClientLogout} 

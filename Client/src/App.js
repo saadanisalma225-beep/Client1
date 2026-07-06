@@ -1,3 +1,4 @@
+// App.js
 import React, { useState, useEffect } from 'react';
 import Layout from './client/components/Layout';
 import Admin from './admin/AdminLogin';
@@ -6,14 +7,27 @@ import Register from './admin/Register';
 import HomePage from './client/HomePage';
 import AuthPage from './client/AuthPage';
 import ProfilePage from './client/ProfilePage';
+import Encheres from './client/Encheres';
+import VoirDetails from './client/VoirDetails';
+import EncheresEnCours from './client/EncheresEnCours';
+import Publies from './client/Publies';
+import EnAttente from './client/EnAttente';
+import Vendus from './client/Vendus';
+import Gagnes from './client/Gagnes';
+import ParticipationEnchere from './client/ParticipationEnchere';
+import WalletPage from './client/Wallet';  // ✅ Importer WalletPage
 import EmailVerification from './client/EmailVerification';
+import DomainesPage from './client/DomainesPage';
+import CategoriesPage from './client/CategoriesPage';
+import ContactPage from './client/ContactPage';
+
 
 function App() {
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(!!localStorage.getItem('adminToken'));
   const [isClientLoggedIn, setIsClientLoggedIn] = useState(!!localStorage.getItem('token'));
   const [currentPage, setCurrentPage] = useState('home');
+  const [currentPageData, setCurrentPageData] = useState(null);
 
-  // Check client login status on mount
   useEffect(() => {
     const checkClientLogin = () => {
       setIsClientLoggedIn(!!localStorage.getItem('token'));
@@ -48,6 +62,7 @@ function App() {
 
   const handleNavigate = (page, data = null) => {
     setCurrentPage(page);
+    setCurrentPageData(data);
     window.scrollTo(0, 0);
   };
 
@@ -92,16 +107,33 @@ function App() {
         return <HomePage onNavigate={handleNavigate} isClientLoggedIn={isClientLoggedIn} />;
       case 'profile':
         return <ProfilePage onNavigate={handleNavigate} />;
+      case 'encheres':
+        return <Encheres onNavigate={handleNavigate} />;
+      case 'publies':
+        return <Publies onNavigate={handleNavigate} />;
+      case 'attente':
+        return <EnAttente onNavigate={handleNavigate} />;
+      case 'vendus':
+        return <Vendus onNavigate={handleNavigate} />;
+      case 'gagnes':
+        return <Gagnes onNavigate={handleNavigate} />;
+      case 'auctions':
+        return <EncheresEnCours onNavigate={handleNavigate} />;
+      case 'product-detail':
+        return <ParticipationEnchere onNavigate={handleNavigate} productId={currentPageData} />;
+      case 'domaines':
+        return <DomainesPage onNavigate={handleNavigate} />;
+      case 'categories':
+        return <CategoriesPage onNavigate={handleNavigate} />;
       case 'wallet':
-        return <div className="page-placeholder"><h2>My Wallet</h2></div>;
+        // ✅ Remplacer le placeholder par WalletPage
+        return <WalletPage onNavigate={handleNavigate} />;
       case 'settings':
         return <div className="page-placeholder"><h2>Paramètres</h2></div>;
-      case 'auctions':
-        return <div className="page-placeholder"><h2>Enchères</h2></div>;
-      case 'categories':
-        return <div className="page-placeholder"><h2>Catégories</h2></div>;
       case 'sell':
         return <div className="page-placeholder"><h2>Vendre</h2></div>;
+        case 'contact':
+  return <ContactPage onNavigate={handleNavigate} />;
       default:
         return <HomePage onNavigate={handleNavigate} isClientLoggedIn={isClientLoggedIn} />;
     }

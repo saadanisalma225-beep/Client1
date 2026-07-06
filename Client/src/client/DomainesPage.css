@@ -1,0 +1,230 @@
+/* client/DomainesPage.css */
+
+.domaines-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 24px;
+  min-height: calc(100vh - 80px);
+  background: #f7fafc;
+}
+
+/* Header */
+.domaines-header {
+  margin-bottom: 40px;
+  padding: 20px 0;
+}
+
+.domaines-header h1 {
+  font-size: 36px;
+  font-weight: 700;
+  color: #1a202c;
+  margin-bottom: 8px;
+  letter-spacing: -0.5px;
+}
+
+.domaines-subtitle {
+  font-size: 16px;
+  color: #718096;
+  font-weight: 400;
+}
+
+/* Error Banner */
+.error-banner {
+  background: #fff5f5;
+  color: #c53030;
+  padding: 12px 20px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-left: 4px solid #fc8181;
+}
+
+.error-banner button {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: #c53030;
+  padding: 0 8px;
+  line-height: 1;
+}
+
+/* Grid */
+.domaines-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 24px;
+}
+
+/* Domaine Card */
+.domaine-card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 28px 24px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 1px solid #e2e8f0;
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+}
+
+.domaine-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1);
+  border-color: #3182ce;
+}
+
+.domaine-card-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.domaine-card h3 {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1a202c;
+  margin-bottom: 12px;
+  letter-spacing: -0.3px;
+}
+
+.domaine-card p {
+  font-size: 14px;
+  color: #4a5568;
+  line-height: 1.7;
+  flex: 1;
+  margin-bottom: 16px;
+}
+
+.domaine-meta {
+  margin-bottom: 16px;
+}
+
+.categories-count {
+  font-size: 13px;
+  color: #718096;
+  background: #edf2f7;
+  padding: 4px 14px;
+  border-radius: 20px;
+  display: inline-block;
+  font-weight: 500;
+}
+
+.btn-explorer {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: #3182ce;
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  align-self: flex-start;
+}
+
+.btn-explorer:hover {
+  background: #2b6cb0;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(49, 130, 206, 0.3);
+}
+
+.btn-explorer:active {
+  transform: translateY(0);
+}
+
+/* Loading State */
+.loading-state {
+  text-align: center;
+  padding: 80px 20px;
+}
+
+.loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid #e2e8f0;
+  border-top-color: #3182ce;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 16px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading-state p {
+  color: #718096;
+  font-size: 16px;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .domaines-grid {
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 20px;
+  }
+}
+
+@media (max-width: 768px) {
+  .domaines-page {
+    padding: 24px 16px;
+  }
+
+  .domaines-header h1 {
+    font-size: 28px;
+  }
+
+  .domaines-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .domaine-card {
+    padding: 20px 16px;
+    min-height: 180px;
+  }
+
+  .domaine-card h3 {
+    font-size: 20px;
+  }
+
+  .domaine-card p {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  .domaines-page {
+    padding: 16px 12px;
+  }
+
+  .domaines-header h1 {
+    font-size: 24px;
+  }
+
+  .domaines-subtitle {
+    font-size: 14px;
+  }
+
+  .domaine-card {
+    padding: 16px 14px;
+    min-height: 160px;
+  }
+
+  .domaine-card h3 {
+    font-size: 18px;
+  }
+
+  .btn-explorer {
+    padding: 8px 16px;
+    font-size: 13px;
+  }
+}

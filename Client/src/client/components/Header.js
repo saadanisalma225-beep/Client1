@@ -60,6 +60,7 @@ const Header = ({ onNavigate, isClientLoggedIn, onClientLogout }) => {
           <a href="#categories" onClick={(e) => { e.preventDefault(); onNavigate?.('categories'); }}>Catégories</a>
           <a href="#sell" onClick={(e) => { e.preventDefault(); onNavigate?.('sell'); }}>Vendre</a>
           <a href="#wallet" onClick={(e) => { e.preventDefault(); onNavigate?.('wallet'); }}>My Wallet</a>
+          <a href="#contact" onClick={(e) => { e.preventDefault(); onNavigate?.('contact'); }}>Contact</a> {/* ← AJOUT */}
         </nav>
 
         <div className="header-actions">

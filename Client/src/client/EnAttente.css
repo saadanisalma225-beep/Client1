@@ -1,0 +1,654 @@
+/* client/EnAttente.css */
+
+.en-attente-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 30px 24px;
+  background: #f7fafc;
+  min-height: calc(100vh - 80px);
+}
+
+/* ===== VENDEUR HEADER ===== */
+.vendeur-header {
+  position: relative;
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.vendeur-header-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100px;
+  background: linear-gradient(135deg, #dd6b20 0%, #ed8936 50%, #dd6b20 100%);
+  opacity: 0.08;
+}
+
+.vendeur-header-content {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 24px 32px 32px;
+  background: transparent;
+  z-index: 1;
+}
+
+.vendeur-avatar {
+  flex-shrink: 0;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 4px solid white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  margin-top: 30px;
+}
+
+.vendeur-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.vendeur-info {
+  flex: 1;
+  padding-top: 10px;
+}
+
+.vendeur-info h1 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1a202c;
+  margin-bottom: 4px;
+}
+
+.membre-since {
+  font-size: 14px;
+  color: #718096;
+  margin-bottom: 12px;
+}
+
+.vendeur-stats {
+  display: flex;
+  gap: 24px;
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #4a5568;
+  font-size: 13px;
+}
+
+.stat-item .stat-number {
+  font-weight: 700;
+  color: #1a202c;
+  font-size: 16px;
+}
+
+.stat-item .stat-label {
+  color: #718096;
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ===== INFO BANNER ===== */
+.info-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  background: #fffbeb;
+  border: 1px solid #f6e05e;
+  border-radius: 10px;
+  margin-bottom: 28px;
+  color: #744210;
+  font-size: 14px;
+}
+
+.info-banner svg {
+  color: #d69e2e;
+  flex-shrink: 0;
+}
+
+/* ===== PENDING LIST ===== */
+.pending-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ===== PENDING CARD ===== */
+.pending-card {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+}
+
+.pending-card:hover {
+  border-color: #f6ad55;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.pending-card.expanded {
+  border-color: #ed8936;
+  box-shadow: 0 8px 24px rgba(237, 137, 54, 0.12);
+}
+
+.pending-card-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.pending-card-header:hover {
+  background: #f7fafc;
+}
+
+.pending-card-image {
+  flex: 0 0 80px;
+  height: 80px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #edf2f7;
+}
+
+.pending-card-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pending-card-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.product-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.product-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a202c;
+  margin: 0;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.status-badge.status-en-cours {
+  background: #fefcbf;
+  color: #975a16;
+}
+
+.status-badge.status-en-revision {
+  background: #fbd38d;
+  color: #7b341e;
+}
+
+.status-badge.status-valide {
+  background: #c6f6d5;
+  color: #276749;
+}
+
+.status-badge.status-rejete {
+  background: #fed7d7;
+  color: #9b2c2c;
+}
+
+.product-category {
+  font-size: 13px;
+  color: #718096;
+  margin-bottom: 4px;
+}
+
+.product-price {
+  font-size: 18px;
+  font-weight: 600;
+  color: #2b6cb0;
+}
+
+.product-meta {
+  display: flex;
+  gap: 16px;
+  margin-top: 4px;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: #718096;
+}
+
+.pending-card-actions {
+  flex-shrink: 0;
+}
+
+.btn-expand {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: white;
+  color: #4a5568;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-expand:hover {
+  background: #f7fafc;
+  border-color: #ed8936;
+  color: #ed8936;
+}
+
+.btn-expand .rotated {
+  transform: rotate(90deg);
+}
+
+/* ===== EXPANDED DETAILS ===== */
+.pending-card-details {
+  padding: 0 20px 20px;
+  border-top: 1px solid #edf2f7;
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Progress */
+.progress-section {
+  padding: 16px 0;
+}
+
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  font-weight: 500;
+  color: #4a5568;
+  margin-bottom: 8px;
+}
+
+.progress-step {
+  color: #ed8936;
+}
+
+.progress-bar {
+  height: 6px;
+  background: #edf2f7;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ed8936, #dd6b20);
+  border-radius: 3px;
+  transition: width 0.5s ease;
+}
+
+.progress-steps {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #a0aec0;
+}
+
+.progress-steps span {
+  transition: color 0.3s ease;
+}
+
+.progress-steps span.completed {
+  color: #38a169;
+}
+
+/* Comments */
+.comments-section {
+  padding: 16px 0;
+  border-top: 1px solid #edf2f7;
+}
+
+.comments-section h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #4a5568;
+  margin: 0 0 12px 0;
+}
+
+.comment-item {
+  padding: 10px 14px;
+  background: #f7fafc;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  border-left: 3px solid #a0aec0;
+}
+
+.comment-item.info {
+  border-left-color: #3182ce;
+}
+
+.comment-item.success {
+  border-left-color: #38a169;
+}
+
+.comment-item.warning {
+  border-left-color: #ed8936;
+}
+
+.comment-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.comment-author {
+  font-weight: 600;
+  font-size: 13px;
+  color: #2d3748;
+}
+
+.comment-date {
+  font-size: 12px;
+  color: #a0aec0;
+}
+
+.comment-message {
+  font-size: 14px;
+  color: #4a5568;
+  margin: 0;
+}
+
+/* Details Actions */
+.details-actions {
+  display: flex;
+  gap: 8px;
+  padding-top: 16px;
+  border-top: 1px solid #edf2f7;
+  flex-wrap: wrap;
+}
+
+.details-actions button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-edit {
+  background: #ebf8ff;
+  color: #2b6cb0;
+}
+
+.btn-edit:hover {
+  background: #bee3f8;
+}
+
+.btn-view {
+  background: #f7fafc;
+  color: #4a5568;
+  border: 1px solid #e2e8f0;
+}
+
+.btn-view:hover {
+  background: #edf2f7;
+}
+
+.btn-delete {
+  background: #fff5f5;
+  color: #e53e3e;
+}
+
+.btn-delete:hover {
+  background: #fed7d7;
+}
+
+.btn-resubmit {
+  background: #fffbeb;
+  color: #d69e2e;
+  border: 1px solid #f6e05e;
+}
+
+.btn-resubmit:hover {
+  background: #fefcbf;
+}
+
+/* ===== LOADING ===== */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  text-align: center;
+}
+
+.spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid #e2e8f0;
+  border-top-color: #ed8936;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-bottom: 16px;
+}
+
+.loading-state p {
+  color: #718096;
+  font-size: 16px;
+}
+
+/* ===== EMPTY STATE ===== */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  text-align: center;
+  background: white;
+  border-radius: 16px;
+  border: 2px dashed #e2e8f0;
+}
+
+.empty-icon {
+  color: #cbd5e0;
+  margin-bottom: 16px;
+}
+
+.empty-state h3 {
+  font-size: 20px;
+  color: #1a202c;
+  margin: 0 0 8px 0;
+}
+
+.empty-state p {
+  color: #718096;
+  font-size: 15px;
+  max-width: 400px;
+  margin: 0 0 20px 0;
+}
+
+.btn-create-product {
+  padding: 12px 32px;
+  background: #ed8936;
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-create-product:hover {
+  background: #dd6b20;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(237, 137, 54, 0.3);
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 992px) {
+  .en-attente-page {
+    padding: 20px 16px;
+  }
+
+  .pending-card-image {
+    flex: 0 0 60px;
+    height: 60px;
+  }
+}
+
+@media (max-width: 768px) {
+  .en-attente-page {
+    padding: 16px;
+  }
+
+  .vendeur-header-content {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 20px;
+  }
+
+  .vendeur-avatar {
+    width: 70px;
+    height: 70px;
+    margin-top: 0;
+  }
+
+  .vendeur-stats {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .pending-card-header {
+    flex-wrap: wrap;
+    padding: 12px 16px;
+  }
+
+  .pending-card-actions {
+    width: 100%;
+    text-align: right;
+  }
+
+  .product-title-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .product-meta {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .details-actions {
+    flex-direction: column;
+  }
+
+  .details-actions button {
+    justify-content: center;
+  }
+
+  .progress-steps {
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .en-attente-page {
+    padding: 12px 10px;
+  }
+
+  .vendeur-header-content {
+    padding: 16px;
+  }
+  
+  .vendeur-info h1 {
+    font-size: 20px;
+  }
+
+  .vendeur-stats {
+    gap: 12px;
+    font-size: 12px;
+  }
+
+  .stat-item .stat-number {
+    font-size: 14px;
+  }
+
+  .product-title {
+    font-size: 14px;
+  }
+
+  .product-price {
+    font-size: 16px;
+  }
+
+  .pending-card-image {
+    flex: 0 0 50px;
+    height: 50px;
+  }
+
+  .info-banner {
+    font-size: 13px;
+    padding: 10px 14px;
+    flex-wrap: wrap;
+  }
+
+  .btn-expand {
+    font-size: 12px;
+    padding: 4px 10px;
+  }
+}

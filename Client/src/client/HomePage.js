@@ -227,4 +227,4 @@ const HomePage = ({ onNavigate, isClientLoggedIn }) => {
   );
 };
 
-export default HomePage;
+export default HomePage; 
