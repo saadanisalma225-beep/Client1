@@ -11,16 +11,52 @@ import Encheres from './client/Encheres';
 import VoirDetails from './client/VoirDetails';
 import EncheresEnCours from './client/EncheresEnCours';
 import Publies from './client/Publies';
+import PubliesSimple from './client/PubliesSimple'; // ✅ NOUVEL IMPORT
 import EnAttente from './client/EnAttente';
 import Vendus from './client/Vendus';
 import Gagnes from './client/Gagnes';
 import ParticipationEnchere from './client/ParticipationEnchere';
-import WalletPage from './client/Wallet';  // ✅ Importer WalletPage
+import WalletPage from './client/Wallet';
 import EmailVerification from './client/EmailVerification';
 import DomainesPage from './client/DomainesPage';
 import CategoriesPage from './client/CategoriesPage';
 import ContactPage from './client/ContactPage';
+import { FileText } from 'lucide-react';
 
+// ✅ Composant pour la page "Publiés" (liste vide)
+const PubliesListPage = ({ onNavigate }) => {
+  return (
+    <div className="conteneur-publier">
+      <div className="assistant-wrapper">
+        <div className="empty-state" style={{ padding: '60px 20px', textAlign: 'center' }}>
+          <FileText size={48} style={{ color: '#cbd5e0', marginBottom: '16px' }} />
+          <h3 style={{ fontSize: '20px', color: '#1a202c', marginBottom: '8px' }}>
+            Vous n'avez pas encore publié de produits
+          </h3>
+          <p style={{ color: '#718096', marginBottom: '20px' }}>
+            Publiez votre premier produit dès maintenant !
+          </p>
+          <button 
+            className="btn-create-product"
+            onClick={() => onNavigate('sell')}
+            style={{
+              padding: '12px 32px',
+              background: '#ed8936',
+              border: 'none',
+              borderRadius: '8px',
+              color: 'white',
+              fontSize: '15px',
+              fontWeight: '600',
+              cursor: 'pointer'
+            }}
+          >
+            Vendre un produit
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 function App() {
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(!!localStorage.getItem('adminToken'));
@@ -104,38 +140,39 @@ function App() {
   const renderPageContent = () => {
     switch (currentPage) {
       case 'home':
-        return <HomePage onNavigate={handleNavigate} isClientLoggedIn={isClientLoggedIn} />;
+        return <HomePage key="home" onNavigate={handleNavigate} isClientLoggedIn={isClientLoggedIn} />;
       case 'profile':
-        return <ProfilePage onNavigate={handleNavigate} />;
+        return <ProfilePage key="profile" onNavigate={handleNavigate} />;
       case 'encheres':
-        return <Encheres onNavigate={handleNavigate} />;
+        return <Encheres key="encheres" onNavigate={handleNavigate} />;
       case 'publies':
-        return <Publies onNavigate={handleNavigate} />;
+        // ✅ Page "Publiés" - Liste vide avec bouton "Vendre"
+        return <PubliesListPage key="publies-list" onNavigate={handleNavigate} />;
       case 'attente':
-        return <EnAttente onNavigate={handleNavigate} />;
+        return <EnAttente key="attente" onNavigate={handleNavigate} />;
       case 'vendus':
-        return <Vendus onNavigate={handleNavigate} />;
+        return <Vendus key="vendus" onNavigate={handleNavigate} />;
       case 'gagnes':
-        return <Gagnes onNavigate={handleNavigate} />;
+        return <Gagnes key="gagnes" onNavigate={handleNavigate} />;
       case 'auctions':
-        return <EncheresEnCours onNavigate={handleNavigate} />;
+        return <EncheresEnCours key="auctions" onNavigate={handleNavigate} />;
       case 'product-detail':
-        return <ParticipationEnchere onNavigate={handleNavigate} productId={currentPageData} />;
+        return <ParticipationEnchere key={`product-${currentPageData}`} onNavigate={handleNavigate} productId={currentPageData} />;
       case 'domaines':
-        return <DomainesPage onNavigate={handleNavigate} />;
+        return <DomainesPage key="domaines" onNavigate={handleNavigate} />;
       case 'categories':
-        return <CategoriesPage onNavigate={handleNavigate} />;
+        return <CategoriesPage key="categories" onNavigate={handleNavigate} />;
       case 'wallet':
-        // ✅ Remplacer le placeholder par WalletPage
-        return <WalletPage onNavigate={handleNavigate} />;
+        return <WalletPage key="wallet" onNavigate={handleNavigate} />;
       case 'settings':
-        return <div className="page-placeholder"><h2>Paramètres</h2></div>;
+        return <div key="settings" className="page-placeholder"><h2>Paramètres</h2></div>;
       case 'sell':
-        return <div className="page-placeholder"><h2>Vendre</h2></div>;
-        case 'contact':
-  return <ContactPage onNavigate={handleNavigate} />;
+        // ✅ Page "Vendre" - Formulaire en deux étapes (version simplifiée)
+        return <PubliesSimple key="sell-form" onNavigate={handleNavigate} />;
+      case 'contact':
+        return <ContactPage key="contact" onNavigate={handleNavigate} />;
       default:
-        return <HomePage onNavigate={handleNavigate} isClientLoggedIn={isClientLoggedIn} />;
+        return <HomePage key="home-default" onNavigate={handleNavigate} isClientLoggedIn={isClientLoggedIn} />;
     }
   };
 

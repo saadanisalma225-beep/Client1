@@ -45,6 +45,8 @@ const BarreNavigation = ({ onNavigate, isClientLoggedIn, onClientLogout }) => {
   const notifRef = useRef(null);
   const searchRef = useRef(null);
   const [unreadCount, setUnreadCount] = useState(0);
+  // ✅ AJOUT : flag pour éviter les mises à jour après démontage
+  const isMountedRef = useRef(true);
 
   // Types de notifications avec leurs icônes et couleurs
   const notificationTypes = {
@@ -58,7 +60,10 @@ const BarreNavigation = ({ onNavigate, isClientLoggedIn, onClientLogout }) => {
     system: { icon: <AlertCircle size={16} />, color: '#718096', label: 'Système' }
   };
 
+  // ✅ CORRECTION : useEffect avec cleanup et isMounted
   useEffect(() => {
+    isMountedRef.current = true;
+    
     const encryptedUser = localStorage.getItem('user');
     const token = localStorage.getItem('token');
     
@@ -74,6 +79,10 @@ const BarreNavigation = ({ onNavigate, isClientLoggedIn, onClientLogout }) => {
     } else {
       setClient(null);
     }
+
+    return () => {
+      isMountedRef.current = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isClientLoggedIn]);
 
@@ -89,7 +98,7 @@ const BarreNavigation = ({ onNavigate, isClientLoggedIn, onClientLogout }) => {
       });
       
       const data = await response.json();
-      if (response.ok && data.success) {
+      if (response.ok && data.success && isMountedRef.current) {
         setClient(data.client);
         localStorage.setItem('user', encryptData(data.client));
       }
@@ -206,12 +215,12 @@ const BarreNavigation = ({ onNavigate, isClientLoggedIn, onClientLogout }) => {
       });
       
       const data = await response.json();
-      if (response.ok && data.success) {
+      if (response.ok && data.success && isMountedRef.current) {
         setNotifications(data.notifications || []);
         const unread = data.notifications?.filter(n => !n.read).length || 0;
         setUnreadCount(unread);
         setNotifCount(unread);
-      } else {
+      } else if (isMountedRef.current) {
         const fallbackNotifs = getFallbackNotifications();
         setNotifications(fallbackNotifs);
         const unread = fallbackNotifs.filter(n => !n.read).length;
@@ -220,11 +229,13 @@ const BarreNavigation = ({ onNavigate, isClientLoggedIn, onClientLogout }) => {
       }
     } catch (error) {
       console.error('Erreur chargement notifications:', error);
-      const fallbackNotifs = getFallbackNotifications();
-      setNotifications(fallbackNotifs);
-      const unread = fallbackNotifs.filter(n => !n.read).length;
-      setUnreadCount(unread);
-      setNotifCount(unread);
+      if (isMountedRef.current) {
+        const fallbackNotifs = getFallbackNotifications();
+        setNotifications(fallbackNotifs);
+        const unread = fallbackNotifs.filter(n => !n.read).length;
+        setUnreadCount(unread);
+        setNotifCount(unread);
+      }
     }
   };
 
@@ -240,18 +251,19 @@ const BarreNavigation = ({ onNavigate, isClientLoggedIn, onClientLogout }) => {
         }
       });
       
-      const updated = notifications.map(notif =>
-        notif.id === id ? { ...notif, read: true } : notif
-      );
-      setNotifications(updated);
-      const unread = updated.filter(n => !n.read).length;
-      setUnreadCount(unread);
-      setNotifCount(unread);
+      if (isMountedRef.current) {
+        const updated = notifications.map(notif =>
+          notif.id === id ? { ...notif, read: true } : notif
+        );
+        setNotifications(updated);
+        const unread = updated.filter(n => !n.read).length;
+        setUnreadCount(unread);
+        setNotifCount(unread);
+      }
       
       // Rediriger si un lien est fourni
       if (link) {
         setNotifOpen(false);
-        // Navigation vers la page concernée
         if (link.includes('/product/')) {
           const productId = link.split('/').pop();
           onNavigate?.('product-detail', parseInt(productId));
@@ -285,10 +297,12 @@ const BarreNavigation = ({ onNavigate, isClientLoggedIn, onClientLogout }) => {
         }
       });
       
-      const updated = notifications.map(notif => ({ ...notif, read: true }));
-      setNotifications(updated);
-      setUnreadCount(0);
-      setNotifCount(0);
+      if (isMountedRef.current) {
+        const updated = notifications.map(notif => ({ ...notif, read: true }));
+        setNotifications(updated);
+        setUnreadCount(0);
+        setNotifCount(0);
+      }
     } catch (error) {
       console.error('Erreur marquage toutes notifications:', error);
     }
@@ -322,9 +336,9 @@ const BarreNavigation = ({ onNavigate, isClientLoggedIn, onClientLogout }) => {
       });
       
       const data = await response.json();
-      if (response.ok && data.success) {
+      if (response.ok && data.success && isMountedRef.current) {
         setSearchResults(data.results || []);
-      } else {
+      } else if (isMountedRef.current) {
         setSearchResults([
           { id: 1, title: 'Tapis Berbère Azilal', price: '10 000 MAD', category: 'Tapis & Textiles' },
           { id: 2, title: 'Vase Fassi Émaillé', price: '850 MAD', category: 'Céramique & Poterie' }
@@ -332,20 +346,34 @@ const BarreNavigation = ({ onNavigate, isClientLoggedIn, onClientLogout }) => {
       }
     } catch (error) {
       console.error('Erreur recherche:', error);
-      setSearchResults([]);
+      if (isMountedRef.current) {
+        setSearchResults([]);
+      }
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
     }
   };
 
+  // ✅ CORRECTION : useEffect avec cleanup
   useEffect(() => {
-    const handleScroll = () => setIsScrolled(window.scrollY > 50);
+    const handleScroll = () => {
+      if (isMountedRef.current) {
+        setIsScrolled(window.scrollY > 50);
+      }
+    };
     window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
   }, []);
 
+  // ✅ CORRECTION : useEffect avec cleanup et isMounted
   useEffect(() => {
     const handleClickOutside = (event) => {
+      if (!isMountedRef.current) return;
+      
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setDropdownOpen(false);
       }
@@ -356,8 +384,11 @@ const BarreNavigation = ({ onNavigate, isClientLoggedIn, onClientLogout }) => {
         setSearchOpen(false);
       }
     };
+    
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, []);
 
   const handleLogout = () => {
@@ -384,7 +415,6 @@ const BarreNavigation = ({ onNavigate, isClientLoggedIn, onClientLogout }) => {
   // ===== MENU ITEMS MODIFIÉS - Suppression des éléments inutiles =====
   const menuItems = [
     { icon: <User size={16} />, label: 'Mon profil', page: 'profile' }
-    // Tous les autres éléments ont été supprimés
   ];
 
   const navLinks = [
@@ -649,7 +679,6 @@ const BarreNavigation = ({ onNavigate, isClientLoggedIn, onClientLogout }) => {
 
                     <div className="dropdown-divider"></div>
 
-                    {/* SEULEMENT "Mon profil" dans le menu */}
                     {menuItems.map((item, index) => (
                       <button
                         key={index}
@@ -666,7 +695,6 @@ const BarreNavigation = ({ onNavigate, isClientLoggedIn, onClientLogout }) => {
 
                     <div className="dropdown-divider"></div>
 
-                    {/* Déconnexion */}
                     <button className="dropdown-item logout-btn" onClick={handleLogout}>
                       <LogOut size={16} strokeWidth={2} />
                       Déconnexion
@@ -687,7 +715,6 @@ const BarreNavigation = ({ onNavigate, isClientLoggedIn, onClientLogout }) => {
             </>
           )}
 
-          {/* Menu mobile */}
           <button className="mobile-menu-btn" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
             {mobileMenuOpen ? <X size={22} strokeWidth={2} /> : <Menu size={22} strokeWidth={2} />}
           </button>
